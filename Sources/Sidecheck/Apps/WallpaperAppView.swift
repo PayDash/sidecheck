@@ -40,6 +40,7 @@ struct WallpaperAppView: View {
                 sectionLabel("VIDEO")
                 videoCard
 
+
                 footerActions
             }
             .padding(16)
@@ -99,9 +100,11 @@ struct WallpaperAppView: View {
 
     /// One selectable background-kind tile with a swatch + selection chrome.
     /// `select` overrides the default "just set the kind" behavior (gradient
-    /// tiles also record which preset was picked).
-    private func kindTile(kind: BackgroundKind, name: String, select: ((inout BackgroundSpec) -> Void)? = nil, swatch: () -> LinearGradient) -> some View {
-        let isSelected = spec.kind == kind
+    /// tiles also record which preset was picked); `isSelected` overrides the
+    /// default kind equality — gradient tiles must compare `gradientID` too,
+    /// otherwise one click highlights every preset.
+    private func kindTile(kind: BackgroundKind, name: String, select: ((inout BackgroundSpec) -> Void)? = nil, isSelected overrideSelected: Bool? = nil, swatch: () -> LinearGradient) -> some View {
+        let isSelected = overrideSelected ?? (spec.kind == kind)
         return Button {
             if let select {
                 update(select)
@@ -231,10 +234,15 @@ struct WallpaperAppView: View {
     }
 
     private func gradientTile(_ preset: GradientPresets.Preset) -> some View {
-        kindTile(kind: .gradient, name: preset.name, select: { spec in
-            spec.kind = .gradient
-            spec.gradientID = preset.id
-        }) {
+        kindTile(
+            kind: .gradient,
+            name: preset.name,
+            select: { spec in
+                spec.kind = .gradient
+                spec.gradientID = preset.id
+            },
+            isSelected: spec.kind == .gradient && spec.gradientID == preset.id
+        ) {
             LinearGradient(colors: preset.colors, startPoint: .topLeading, endPoint: .bottomTrailing)
         }
     }
@@ -274,7 +282,7 @@ struct WallpaperAppView: View {
                 CardTitle(icon: "film", title: "Video")
                 if spec.kind == .video, let path = spec.filePath {
                     if WallpaperStore.mediaExists(path) {
-                        CropEditorView(mode: .video(path: path), crop: cropBinding)
+                        CropEditorView(mode: .video(path: path), crop: cropBinding, muted: spec.isMuted)
                         HStack(spacing: 10) {
                             Text((path as NSString).lastPathComponent)
                                 .font(.system(size: 10))
@@ -423,6 +431,9 @@ struct CropEditorView: View {
     @EnvironmentObject var themes: ThemeStore
     let mode: Mode
     @Binding var crop: CropSpec
+    /// Video: follow the spec's sound setting — the editor and the panel
+    /// share one AVPlayer, so hardcoding either would fight the other.
+    var muted: Bool = true
 
     @State private var gestureStart: CropSpec?
 
@@ -450,7 +461,7 @@ struct CropEditorView: View {
                 crop: crop,
                 paused: false, // the editor is only on screen while visible
                 video: isVideo,
-                muted: false   // hear it while composing; the panel follows the mute setting
+                muted: muted
             )
             .frame(width: size.width, height: size.height)
             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))

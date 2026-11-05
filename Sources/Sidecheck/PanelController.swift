@@ -140,6 +140,7 @@ final class PanelController: ObservableObject {
                 DispatchQueue.main.async { [weak self] in
                     guard let self else { return }
                     self.applySystemAppearance()
+                    self.homeStore.applyThemeLimit(self.themeStore.current.spec.maxHomeSlots)
                     self.refreshFrame(animated: !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion)
                 }
             }
@@ -159,6 +160,7 @@ final class PanelController: ObservableObject {
         hostingView.sizingOptions = []
         panel.contentView = hostingView
         applySystemAppearance()
+        homeStore.applyThemeLimit(themeStore.current.spec.maxHomeSlots)
     }
 
     /// Light themes draw light system controls: without this, the segmented

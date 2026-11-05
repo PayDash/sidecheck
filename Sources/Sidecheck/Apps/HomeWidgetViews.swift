@@ -116,7 +116,7 @@ struct WidgetSlot: View {
                     if home.isEditMode {
                         HStack(spacing: 2) {
                             moveButton(direction: -1, enabled: index > 0)
-                            moveButton(direction: 1, enabled: index < home.widgetSlots.count - 1)
+                            moveButton(direction: 1, enabled: index < home.effectiveSlots.count - 1)
                         }
                     }
                 }

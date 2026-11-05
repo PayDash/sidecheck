@@ -113,7 +113,9 @@ struct PanelBackgroundView: View {
         case .gradient:
             gradientBackground
         case .image:
-            if WallpaperStore.mediaExists(spec.filePath) {
+            // cachedImage (not just mediaExists): an existing but undecodable
+            // file would otherwise render nothing over a transparent panel.
+            if WallpaperStore.cachedImage(spec.filePath) != nil {
                 WallpaperMediaView(path: spec.filePath, crop: spec.crop, paused: paused)
             } else {
                 ThemeNativeBackground(id: themeID, paused: paused)

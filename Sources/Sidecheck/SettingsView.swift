@@ -178,14 +178,21 @@ struct SettingsView: View {
                         .foregroundStyle(theme.textSecondary)
                         .contentTransition(.numericText())
                 }
-                Slider(
-                    value: Binding(
-                        get: { Double(home.slotCount) },
-                        set: { home.slotCount = Int($0.rounded()) }
-                    ),
-                    in: Double(Config.slotCountRange.lowerBound)...Double(Config.slotCountRange.upperBound),
-                    step: 1
-                )
+                if home.activeLimit > Config.slotCountRange.lowerBound {
+                    Slider(
+                        value: Binding(
+                            get: { Double(home.slotCount) },
+                            set: { home.slotCount = Int($0.rounded()) }
+                        ),
+                        in: Double(Config.slotCountRange.lowerBound)...Double(home.activeLimit),
+                        step: 1
+                    )
+                } else {
+                    // Slider requires lower < upper — a phone theme caps at 2.
+                    Text("2 slots — the max for this theme's width")
+                        .font(.system(size: 10))
+                        .foregroundStyle(theme.textTertiary)
+                }
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
@@ -195,7 +202,7 @@ struct SettingsView: View {
                     .strokeBorder(theme.cardStroke, lineWidth: 1)
             )
 
-            ForEach(home.widgetSlots.indices, id: \.self) { index in
+            ForEach(home.effectiveSlots.indices, id: \.self) { index in
                 HStack(spacing: 10) {
                     Text("Slot \(index + 1)")
                         .font(.system(size: 13))
@@ -221,7 +228,7 @@ struct SettingsView: View {
     private func slotMoveButtons(index: Int) -> some View {
         HStack(spacing: 2) {
             slotMoveButton(index: index, direction: -1, enabled: index > 0)
-            slotMoveButton(index: index, direction: 1, enabled: index < home.widgetSlots.count - 1)
+            slotMoveButton(index: index, direction: 1, enabled: index < home.effectiveSlots.count - 1)
         }
     }
 

@@ -23,7 +23,21 @@ final class HomeStore: ObservableObject {
         }
     }
 
+    /// Slots actually rendered — the current theme may cap this below
+    /// `slotCount` (phone-card frames fit 2). Extra assignments are kept so
+    /// switching to a wider theme restores them.
+    @Published private(set) var activeLimit: Int = Config.slotCountRange.upperBound
+
     @Published var isEditMode = false
+
+    var effectiveSlots: [WidgetKind?] {
+        Array(widgetSlots.prefix(activeLimit))
+    }
+
+    /// Called when the theme changes (and once at launch).
+    func applyThemeLimit(_ limit: Int) {
+        activeLimit = min(max(limit, Config.slotCountRange.lowerBound), Config.slotCountRange.upperBound)
+    }
 
     init() {
         let defaults = UserDefaults.standard
@@ -46,14 +60,15 @@ final class HomeStore: ObservableObject {
     }
 
     func assign(slot: Int, kind: WidgetKind?) {
-        guard widgetSlots.indices.contains(slot) else { return }
+        guard slot < activeLimit, widgetSlots.indices.contains(slot) else { return }
         widgetSlots[slot] = kind
     }
 
-    /// Swaps a slot with its left/right neighbor.
+    /// Swaps a slot with its left/right neighbor (within the active limit).
     func move(slot: Int, direction: Int) {
         let target = slot + direction
-        guard widgetSlots.indices.contains(slot), widgetSlots.indices.contains(target) else { return }
+        guard slot < activeLimit, target < activeLimit,
+              widgetSlots.indices.contains(slot), widgetSlots.indices.contains(target) else { return }
         widgetSlots.swapAt(slot, target)
     }
 

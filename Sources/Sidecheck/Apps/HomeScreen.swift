@@ -41,7 +41,7 @@ struct HomeScreen: View {
 
     private var widgetRow: some View {
         HStack(alignment: .top, spacing: 12) {
-            ForEach(home.widgetSlots.indices, id: \.self) { index in
+            ForEach(home.effectiveSlots.indices, id: \.self) { index in
                 WidgetSlot(index: index, onOpen: onOpenApp)
                     .frame(maxWidth: .infinity)
             }

@@ -112,6 +112,12 @@ struct ThemeSpec {
         iconLabelIsWhite: true,
     )
 
+    /// How many home-widget slots fit this frame without crushing widget
+    /// content — phone-card themes get 2, the wide iPad gets the full range.
+    var maxHomeSlots: Int {
+        frameSize.width >= 500 ? Config.slotCountRange.upperBound : 2
+    }
+
     static let cyberdeck = ThemeSpec(
         id: .cyberdeck,
         panelRadius: 14,
