@@ -348,6 +348,81 @@ struct DiskHomeWidget: View {
     }
 }
 
+struct WallpaperHomeWidget: View {
+    @Environment(\.theme) private var theme
+    @EnvironmentObject var themes: ThemeStore
+    @EnvironmentObject var wallpaper: WallpaperStore
+
+    private var spec: BackgroundSpec { wallpaper.spec(for: themes.current) }
+
+    var body: some View {
+        HStack(spacing: 10) {
+            swatchFill
+                .frame(width: 30, height: 30)
+                .overlay(
+                    Group {
+                        if spec.kind == .video {
+                            Image(systemName: "play.fill")
+                                .font(.system(size: 9, weight: .bold))
+                                .foregroundStyle(.white)
+                        } else if spec.kind == .image, let image = WallpaperStore.cachedImage(spec.filePath) {
+                            Image(nsImage: image).resizable().scaledToFill()
+                        }
+                    }
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 6, style: .continuous).strokeBorder(theme.cardStroke, lineWidth: 1))
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Wallpaper")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(theme.textPrimary)
+                Text(kindName)
+                    .font(.system(size: 9.5))
+                    .foregroundStyle(theme.textTertiary)
+            }
+            Spacer()
+            Image(systemName: "chevron.right")
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(theme.textTertiary)
+        }
+    }
+
+    private var kindName: String {
+        switch spec.kind {
+        case .theme: "Theme"
+        case .bubbles: "Bubbles"
+        case .blobs: "Blobs"
+        case .crt: "CRT"
+        case .solid: "Solid color"
+        case .gradient: GradientPresets.byID(spec.gradientID)?.name ?? "Gradient"
+        case .image: "Picture"
+        case .video: "Video"
+        }
+    }
+
+    @ViewBuilder
+    private var swatchFill: some View {
+        switch spec.kind {
+        case .theme:
+            LinearGradient(colors: [theme.accent.opacity(0.8), theme.accent2.opacity(0.5)], startPoint: .topLeading, endPoint: .bottomTrailing)
+        case .bubbles:
+            LinearGradient(colors: [Color.white.opacity(0.25), Color.blue.opacity(0.35)], startPoint: .top, endPoint: .bottom)
+        case .blobs:
+            LinearGradient(colors: [Color(red: 0.93, green: 0.95, blue: 0.98), Color(red: 0.75, green: 0.85, blue: 1.0)], startPoint: .top, endPoint: .bottom)
+        case .crt:
+            LinearGradient(colors: [Color.black, Color(red: 0.05, green: 0.3, blue: 0.12)], startPoint: .top, endPoint: .bottom)
+        case .solid:
+            let color = spec.color?.color ?? .black
+            LinearGradient(colors: [color, color], startPoint: .top, endPoint: .bottom)
+        case .gradient:
+            let preset = GradientPresets.byID(spec.gradientID) ?? GradientPresets.all[0]
+            LinearGradient(colors: preset.colors, startPoint: .topLeading, endPoint: .bottomTrailing)
+        case .image, .video:
+            LinearGradient(colors: [Color.black.opacity(0.6), Color.black.opacity(0.4)], startPoint: .top, endPoint: .bottom)
+        }
+    }
+}
+
 struct SettingsHomeWidget: View {
     @Environment(\.theme) private var theme
 

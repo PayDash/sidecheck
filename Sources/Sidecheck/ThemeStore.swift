@@ -2,7 +2,7 @@ import SwiftUI
 
 // MARK: - Theme IDs
 
-enum ThemeID: String, CaseIterable, Identifiable {
+enum ThemeID: String, CaseIterable, Identifiable, Codable {
     case liquidGlass
     case ipad
     case cyberdeck
@@ -176,6 +176,10 @@ final class ThemeStore: ObservableObject {
     var spec: ThemeSpec { current.spec }
 }
 
+// Encodes `[ThemeID: BackgroundSpec]` as a plain JSON object keyed by raw
+// value — without this, Swift falls back to an array-of-keys representation.
+extension ThemeID: CodingKeyRepresentable {}
+
 // MARK: - Environment
 
 private struct ThemeKey: EnvironmentKey {
@@ -189,133 +193,5 @@ extension EnvironmentValues {
     }
 }
 
-// MARK: - Backgrounds
-
-/// Full-bleed themed background for the panel.
-struct ThemeBackground: View {
-    let id: ThemeID
-    var paused: Bool = false // Reduce Motion freezes all background animation
-
-    var body: some View {
-        switch id {
-        case .liquidGlass: LiquidGlassBackground(paused: paused)
-        case .ipad: IPadBackground(paused: paused)
-        case .cyberdeck: CyberdeckBackground(paused: paused)
-        }
-    }
-}
-
-/// Vibrancy + two slow-drifting aurora glows.
-private struct LiquidGlassBackground: View {
-    let paused: Bool
-
-    var body: some View {
-        ZStack {
-            VisualEffectBackground(material: .hudWindow)
-            TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: paused)) { context in
-                let t = context.date.timeIntervalSinceReferenceDate
-                ZStack {
-                    auroraCircle(color: .blue.opacity(0.35), radius: 180,
-                                 offset: CGPoint(x: sin(t * 0.21) * 90, y: cos(t * 0.17) * 70 - 120))
-                    auroraCircle(color: .cyan.opacity(0.28), radius: 150,
-                                 offset: CGPoint(x: cos(t * 0.16) * 110, y: sin(t * 0.23) * 90 + 130))
-                    auroraCircle(color: .purple.opacity(0.2), radius: 130,
-                                 offset: CGPoint(x: sin(t * 0.11 + 2) * 70, y: cos(t * 0.19 + 1) * 110))
-                }
-            }
-        }
-    }
-
-    private func auroraCircle(color: Color, radius: CGFloat, offset: CGPoint) -> some View {
-        Circle()
-            .fill(RadialGradient(colors: [color, .clear], center: .center, startRadius: 0, endRadius: radius))
-            .frame(width: radius * 2, height: radius * 2)
-            .offset(x: offset.x, y: offset.y)
-            .blur(radius: 30)
-    }
-}
-
-/// Self-contained light wallpaper + slow pastel blobs (iPadOS light mode).
-private struct IPadBackground: View {
-    let paused: Bool
-
-    var body: some View {
-        ZStack {
-            LinearGradient(
-                colors: [
-                    Color(red: 0.93, green: 0.95, blue: 0.98),
-                    Color(red: 0.88, green: 0.91, blue: 0.96),
-                    Color(red: 0.90, green: 0.93, blue: 0.97),
-                ],
-                startPoint: .topLeading, endPoint: .bottomTrailing
-            )
-            TimelineView(.animation(minimumInterval: 1.0 / 20.0, paused: paused)) { context in
-                let t = context.date.timeIntervalSinceReferenceDate
-                ZStack {
-                    blob(Color(red: 0.55, green: 0.75, blue: 1.0).opacity(0.4), radius: 170,
-                         offset: CGPoint(x: sin(t * 0.13) * 100, y: cos(t * 0.11) * 80 - 160))
-                    blob(Color(red: 1.0, green: 0.75, blue: 0.7).opacity(0.3), radius: 150,
-                         offset: CGPoint(x: cos(t * 0.17 + 1) * 90, y: sin(t * 0.14 + 2) * 100 + 150))
-                    blob(Color(red: 0.65, green: 0.95, blue: 0.85).opacity(0.3), radius: 140,
-                         offset: CGPoint(x: sin(t * 0.09 + 3) * 110, y: cos(t * 0.2 + 0.5) * 60))
-                }
-            }
-        }
-    }
-
-    private func blob(_ color: Color, radius: CGFloat, offset: CGPoint) -> some View {
-        Circle()
-            .fill(RadialGradient(colors: [color, .clear], center: .center, startRadius: 0, endRadius: radius))
-            .frame(width: radius * 2, height: radius * 2)
-            .offset(x: offset.x, y: offset.y)
-            .blur(radius: 40)
-    }
-}
-
-/// Phosphor terminal: scanlines, drifting refresh band, vignette, CRT flicker.
-private struct CyberdeckBackground: View {
-    let paused: Bool
-
-    var body: some View {
-        ZStack {
-            Color(red: 0.015, green: 0.035, blue: 0.02)
-
-            Canvas { context, size in
-                var y: CGFloat = 0
-                while y < size.height {
-                    context.fill(
-                        Path(CGRect(x: 0, y: y, width: size.width, height: 1)),
-                        with: .color(.black.opacity(0.30))
-                    )
-                    y += 4
-                }
-            }
-
-            TimelineView(.animation(minimumInterval: 1.0 / 24.0, paused: paused)) { context in
-                let t = context.date.timeIntervalSinceReferenceDate
-                let bandY = (t * 60).truncatingRemainder(dividingBy: 1000) - 200
-                LinearGradient(
-                    colors: [.clear, Color(red: 0.3, green: 1.0, blue: 0.5).opacity(0.06), .clear],
-                    startPoint: .top, endPoint: .bottom
-                )
-                .frame(height: 140)
-                .offset(y: bandY)
-                .frame(maxHeight: .infinity, alignment: .top)
-            }
-
-            // vignette
-            RadialGradient(
-                colors: [.clear, Color.black.opacity(0.55)],
-                center: .center, startRadius: 120, endRadius: 420
-            )
-
-            // CRT flicker (disabled entirely under Reduce Motion)
-            if !paused {
-                TimelineView(.periodic(from: .now, by: 0.12)) { _ in
-                    Color.white.opacity(Double.random(in: 0...0.02))
-                }
-            }
-        }
-        .ignoresSafeArea()
-    }
-}
+// Backgrounds moved to Backgrounds.swift — they are now spec-driven
+// (PanelBackgroundView) so the Wallpaper app can override them per theme.

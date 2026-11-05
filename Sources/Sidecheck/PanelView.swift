@@ -8,6 +8,7 @@ struct PanelView: View {
     @ObservedObject var stats: StatsStore
     @ObservedObject var themes: ThemeStore
     @ObservedObject var home: HomeStore
+    @ObservedObject var wallpaper: WallpaperStore
 
     private var theme: ThemeSpec { themes.current.spec }
 
@@ -54,6 +55,7 @@ struct PanelView: View {
         .environmentObject(themes)
         .environmentObject(home)
         .environmentObject(controller.clipboard)
+        .environmentObject(controller.wallpaper)
         .environmentObject(controller.perf)
         // entrance choreography: content springs in while the window appears
         .opacity(controller.isVisible ? 1 : 0)
@@ -74,11 +76,17 @@ struct PanelView: View {
     private var themedPanel: some View {
         let spec = themes.current.spec
         return ZStack {
-            // Pause the animated backgrounds whenever the panel can't be seen
-            // (hidden window) or shouldn't move (Reduce Motion) — otherwise
-            // TimelineView keeps rendering at display rate for nothing, which
-            // the diagnostics showed as ~8% CPU + ~60 wakeups/s while hidden.
-            ThemeBackground(id: themes.current, paused: reduceMotion || !controller.isVisible)
+            // Wallpaper (per theme) drives the background; animated kinds stay
+            // paused whenever the panel can't be seen (hidden window) or
+            // shouldn't move (Reduce Motion) — otherwise TimelineView keeps
+            // rendering at display rate for nothing, which the diagnostics
+            // showed as ~8% CPU + ~60 wakeups/s while hidden. The background
+            // crossfades independently on wallpaper changes.
+            let wallpaperSpec = wallpaper.spec(for: themes.current)
+            PanelBackgroundView(spec: wallpaperSpec, themeID: themes.current, paused: reduceMotion || !controller.isVisible)
+                .id(wallpaperSpec)
+                .transition(.opacity)
+                .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: wallpaperSpec)
 
             VStack(spacing: 0) {
                 header

@@ -5,6 +5,7 @@ import SwiftUI
 enum AppID: String, CaseIterable, Identifiable {
     case monitor
     case clipboard
+    case wallpaper
     case settings
 
     var id: String { rawValue }
@@ -18,6 +19,7 @@ enum WidgetKind: String, CaseIterable, Identifiable {
     case network
     case disk
     case clipboard
+    case wallpaper
     case settings
 
     var id: String { rawValue }
@@ -26,6 +28,7 @@ enum WidgetKind: String, CaseIterable, Identifiable {
         switch self {
         case .monitor, .battery, .network, .disk: .monitor
         case .clipboard: .clipboard
+        case .wallpaper: .wallpaper
         case .settings: .settings
         }
     }
@@ -37,6 +40,7 @@ enum WidgetKind: String, CaseIterable, Identifiable {
         case .network: "Network"
         case .disk: "Disk"
         case .clipboard: "Clipboard"
+        case .wallpaper: "Wallpaper"
         case .settings: "Settings"
         }
     }
@@ -48,6 +52,7 @@ enum WidgetKind: String, CaseIterable, Identifiable {
         case .network: "wifi"
         case .disk: "internaldrive"
         case .clipboard: "doc.on.clipboard"
+        case .wallpaper: "paintpalette.fill"
         case .settings: "gearshape.fill"
         }
     }
@@ -59,6 +64,7 @@ enum WidgetKind: String, CaseIterable, Identifiable {
         case .network: .purple
         case .disk: .orange
         case .clipboard: .pink
+        case .wallpaper: .teal
         case .settings: .gray
         }
     }
@@ -72,6 +78,7 @@ enum WidgetKind: String, CaseIterable, Identifiable {
         case .network: NetworkHomeWidget()
         case .disk: DiskHomeWidget()
         case .clipboard: ClipboardHomeWidget()
+        case .wallpaper: WallpaperHomeWidget()
         case .settings: SettingsHomeWidget()
         }
     }
@@ -86,6 +93,7 @@ struct PanelApp: Identifiable {
     static let registry: [AppID: PanelApp] = [
         .monitor: PanelApp(id: .monitor, name: "Monitor", symbol: "gauge.with.dots.needle.bottom.50percent", tint: .blue),
         .clipboard: PanelApp(id: .clipboard, name: "Clipboard", symbol: "doc.on.clipboard", tint: .pink),
+        .wallpaper: PanelApp(id: .wallpaper, name: "Wallpaper", symbol: "paintpalette.fill", tint: .teal),
         .settings: PanelApp(id: .settings, name: "Settings", symbol: "gearshape.fill", tint: .gray),
     ]
 
@@ -99,6 +107,7 @@ extension AppID {
         switch self {
         case .monitor: MonitorAppView()
         case .clipboard: ClipboardAppView()
+        case .wallpaper: WallpaperAppView()
         case .settings: SettingsAppView()
         }
     }

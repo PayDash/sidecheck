@@ -1,6 +1,16 @@
 import UserNotifications
 import IOKit.ps
 
+// MARK: - Notification center access
+
+extension UNUserNotificationCenter {
+    /// nil for unbundled dev builds (`swift run`) — UNUserNotificationCenter
+    /// traps without a bundle identifier. The release bundle always has one.
+    static var sidecheck: UNUserNotificationCenter? {
+        Bundle.main.bundleIdentifier == nil ? nil : UNUserNotificationCenter.current()
+    }
+}
+
 // MARK: - Shared battery read
 
 /// IOKit battery snapshot shared by StatsStore and the alerter.
@@ -59,7 +69,11 @@ final class BatteryAlerter: ObservableObject {
     }
 
     private func requestAuthorizationThenStart() {
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { [weak self] granted, _ in
+        guard let center = UNUserNotificationCenter.sidecheck else {
+            start() // dev build: skip permission, just run
+            return
+        }
+        center.requestAuthorization(options: [.alert, .sound]) { [weak self] granted, _ in
             MainActor.assumeIsolated {
                 guard let self else { return }
                 if granted {
@@ -98,11 +112,12 @@ final class BatteryAlerter: ObservableObject {
     }
 
     private func post(title: String, body: String) {
+        guard let center = UNUserNotificationCenter.sidecheck else { return }
         let content = UNMutableNotificationContent()
         content.title = title
         content.body = body
         content.sound = .default
         let request = UNNotificationRequest(identifier: "sidecheck.battery.\(UUID().uuidString)", content: content, trigger: nil)
-        UNUserNotificationCenter.current().add(request)
+        center.add(request)
     }
 }

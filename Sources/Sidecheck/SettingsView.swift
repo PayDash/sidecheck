@@ -1,4 +1,6 @@
+import ServiceManagement
 import SwiftUI
+import UserNotifications
 
 /// In-panel settings: appearance, panel customization (size/animation),
 /// home widget slots, and about. Rendered inside the Settings app page.
@@ -271,6 +273,7 @@ struct SettingsView: View {
         VStack(spacing: 8) {
             liveProcessCard
             healthCard
+            permissionsCard
         }
     }
 
@@ -377,6 +380,145 @@ struct SettingsView: View {
                 .font(.system(size: 11, weight: .semibold))
                 .monospacedDigit()
                 .foregroundStyle(ok ? theme.textSecondary : Color.red)
+        }
+    }
+
+    // MARK: Permissions
+
+    /// Shows every system permission Sidecheck can touch and whether it's
+    /// been granted. Sidecheck is deliberately permission-light: edge
+    /// tracking uses NSEvent monitors (no Accessibility) and wallpapers use
+    /// NSOpenPanel (no sandbox prompts) — notifications and the login item
+    /// are the only two.
+    private var permissionsCard: some View {
+        ThemedCard {
+            VStack(alignment: .leading, spacing: 8) {
+                CardTitle(icon: "lock.shield", title: "Permissions")
+                notificationsRow
+                loginItemRow
+                Text("Files picked for wallpapers are read directly — no sandbox permission needed.")
+                    .font(.system(size: 10))
+                    .foregroundStyle(theme.textTertiary)
+            }
+        }
+        .task { refreshNotificationStatus() }
+        .onChange(of: controller.alerter.isEnabled) { _, _ in refreshNotificationStatus() }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            refreshNotificationStatus()
+        }
+    }
+
+    @State private var notificationStatus: UNAuthorizationStatus?
+
+    private var notificationsRow: some View {
+        let status = notificationStatus
+        let state: String
+        let denied: Bool
+        if status == nil, Bundle.main.bundleIdentifier == nil {
+            state = "N/A (dev build)"
+            denied = false
+        } else {
+            switch status ?? .notDetermined {
+            case .authorized, .provisional:
+                state = "Granted"
+                denied = false
+            case .denied:
+                state = "Denied"
+                denied = true
+            case .notDetermined:
+                state = "Not requested"
+                denied = false
+            @unknown default:
+                state = "Unknown"
+                denied = false
+            }
+        }
+        return HStack(spacing: 8) {
+            Circle()
+                .fill(denied ? Color.red : Color.green)
+                .frame(width: 7, height: 7)
+            Text("Notifications")
+                .font(.system(size: 12.5))
+                .foregroundStyle(theme.textPrimary)
+            Spacer()
+            Text(state)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(denied ? Color.red : theme.textSecondary)
+            if denied {
+                systemSettingsButton("Open Settings", pane: "x-apple.systempreferences:com.apple.preference.notifications")
+            }
+        }
+    }
+
+    private var loginItemRow: some View {
+        let status = SMAppService.mainApp.status
+        let state: String
+        let color: Color
+        let action: (String, String)?
+        switch status {
+        case .enabled:
+            state = "Granted"
+            color = .green
+            action = nil
+        case .requiresApproval:
+            state = "Approval pending"
+            color = .orange
+            action = ("Approve", "x-apple.systempreferences:com.apple.LoginItems-Settings.extension")
+        case .notRegistered:
+            state = "Off"
+            color = .gray
+            action = nil
+        case .notFound:
+            state = "N/A (dev build)"
+            color = .gray
+            action = nil
+        @unknown default:
+            state = "Unknown"
+            color = .gray
+            action = nil
+        }
+        return HStack(spacing: 8) {
+            Circle()
+                .fill(color)
+                .frame(width: 7, height: 7)
+            Text("Launch at Login")
+                .font(.system(size: 12.5))
+                .foregroundStyle(theme.textPrimary)
+            Spacer()
+            Text(state)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(color == .gray ? theme.textSecondary : color)
+            if let action {
+                systemSettingsButton(action.0, pane: action.1)
+            }
+        }
+    }
+
+    private func systemSettingsButton(_ title: String, pane: String) -> some View {
+        Button {
+            if let url = URL(string: pane) {
+                NSWorkspace.shared.open(url)
+            }
+        } label: {
+            Text(title)
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(theme.accent)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(theme.accent.opacity(0.12), in: Capsule())
+                .overlay(Capsule().strokeBorder(theme.accent.opacity(0.4), lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func refreshNotificationStatus() {
+        guard let center = UNUserNotificationCenter.sidecheck else { return }
+        center.getNotificationSettings { settings in
+            DispatchQueue.main.async {
+                MainActor.assumeIsolated {
+                    notificationStatus = settings.authorizationStatus
+                }
+            }
         }
     }
 
