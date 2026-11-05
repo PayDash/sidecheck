@@ -23,12 +23,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         edgeTracker.keepAliveRectProvider = { [weak self] in
             self?.panelController.panelFrameIfVisible
         }
-        // A pinned panel vetoes auto-hide.
+        // A pinned panel (or one with keyboard focus) vetoes auto-hide.
         edgeTracker.canHideProvider = { [weak self] in
             guard let self else { return true }
-            return !self.panelController.isPinned
+            return !self.panelController.isPinned && !self.panelController.panelIsKeyWindow
         }
         edgeTracker.start()
+        panelController.clipboard.startPolling()
         setupStatusItem()
 
         // Dev/test hooks: SIDECHECK_AUTOSHOW=1 pops (and pins) the panel

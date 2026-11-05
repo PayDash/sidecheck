@@ -1,6 +1,5 @@
 import Darwin
 import Foundation
-import IOKit.ps
 
 /// Samples system stats from Mach/IOKit/getifaddrs and publishes the results
 /// for SwiftUI. Sampling runs only while the panel is visible.
@@ -30,6 +29,9 @@ final class StatsStore: ObservableObject {
 
     // Uptime
     @Published private(set) var uptimeSeconds: TimeInterval = 0
+
+    // CPU temperature (°C, via SMC; nil when no sensor answers)
+    @Published private(set) var cpuTempC: Double?
 
     /// Rolling history for sparklines (last `historyCapacity` samples).
     @Published private(set) var cpuHistory: [Double] = [] // 0...1
@@ -73,6 +75,9 @@ final class StatsStore: ObservableObject {
         sampleMemory()
         sampleNetwork()
         slowTick += 1
+        if slowTick % 5 == 1 { // temperature changes slowly
+            cpuTempC = SMCTemp.cpuTemperature()
+        }
         if slowTick % 15 == 1 { // battery/disk/uptime change slowly
             sampleBattery()
             sampleDisk()
@@ -204,20 +209,12 @@ final class StatsStore: ObservableObject {
     }
 
     private func sampleBattery() {
-        guard let snapshot = IOPSCopyPowerSourcesInfo()?.takeRetainedValue(),
-              let list = IOPSCopyPowerSourcesList(snapshot)?.takeRetainedValue() as? [CFTypeRef] else {
-            batteryPercent = nil
-            return
+        if let battery = BatteryInfo.current() {
+            batteryPercent = battery.percent
+            isCharging = battery.isCharging
+        } else {
+            batteryPercent = nil // desktop Mac, no battery
         }
-        for source in list {
-            guard let description = IOPSGetPowerSourceDescription(snapshot, source)?.takeUnretainedValue() as? [String: Any],
-                  let current = description[kIOPSCurrentCapacityKey] as? Int,
-                  let max = description[kIOPSMaxCapacityKey] as? Int, max > 0 else { continue }
-            batteryPercent = Int((Double(current) / Double(max) * 100).rounded())
-            isCharging = (description[kIOPSIsChargingKey] as? Bool) ?? false
-            return
-        }
-        batteryPercent = nil // desktop Mac, no battery
     }
 
     private func sampleDisk() {

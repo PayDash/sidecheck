@@ -4,6 +4,7 @@ import SwiftUI
 /// `fullView` branch — the home screen, dock, and settings pick it up.
 enum AppID: String, CaseIterable, Identifiable {
     case monitor
+    case clipboard
     case settings
 
     var id: String { rawValue }
@@ -16,6 +17,7 @@ enum WidgetKind: String, CaseIterable, Identifiable {
     case battery
     case network
     case disk
+    case clipboard
     case settings
 
     var id: String { rawValue }
@@ -23,6 +25,7 @@ enum WidgetKind: String, CaseIterable, Identifiable {
     var app: AppID {
         switch self {
         case .monitor, .battery, .network, .disk: .monitor
+        case .clipboard: .clipboard
         case .settings: .settings
         }
     }
@@ -33,6 +36,7 @@ enum WidgetKind: String, CaseIterable, Identifiable {
         case .battery: "Battery"
         case .network: "Network"
         case .disk: "Disk"
+        case .clipboard: "Clipboard"
         case .settings: "Settings"
         }
     }
@@ -43,6 +47,7 @@ enum WidgetKind: String, CaseIterable, Identifiable {
         case .battery: "battery.75percent"
         case .network: "wifi"
         case .disk: "internaldrive"
+        case .clipboard: "doc.on.clipboard"
         case .settings: "gearshape.fill"
         }
     }
@@ -53,6 +58,7 @@ enum WidgetKind: String, CaseIterable, Identifiable {
         case .battery: .green
         case .network: .purple
         case .disk: .orange
+        case .clipboard: .pink
         case .settings: .gray
         }
     }
@@ -65,6 +71,7 @@ enum WidgetKind: String, CaseIterable, Identifiable {
         case .battery: BatteryHomeWidget()
         case .network: NetworkHomeWidget()
         case .disk: DiskHomeWidget()
+        case .clipboard: ClipboardHomeWidget()
         case .settings: SettingsHomeWidget()
         }
     }
@@ -78,6 +85,7 @@ struct PanelApp: Identifiable {
 
     static let registry: [AppID: PanelApp] = [
         .monitor: PanelApp(id: .monitor, name: "Monitor", symbol: "gauge.with.dots.needle.bottom.50percent", tint: .blue),
+        .clipboard: PanelApp(id: .clipboard, name: "Clipboard", symbol: "doc.on.clipboard", tint: .pink),
         .settings: PanelApp(id: .settings, name: "Settings", symbol: "gearshape.fill", tint: .gray),
     ]
 
@@ -90,6 +98,7 @@ extension AppID {
     var fullView: some View {
         switch self {
         case .monitor: MonitorAppView()
+        case .clipboard: ClipboardAppView()
         case .settings: SettingsAppView()
         }
     }

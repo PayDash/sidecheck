@@ -1,6 +1,6 @@
 # Sidecheck
 
-A tiny personal macOS menu-bar app: hover the pointer at the **middle-right edge** of any screen and a panel pops out — now a full **app platform** with an iPadOS-style home screen, tappable apps, swappable widgets, and five themes.
+A tiny personal macOS menu-bar app: hover the pointer at the **middle-right edge** of any screen and a panel pops out — a full **app platform** with an iPadOS-style home screen, tappable apps, swappable widgets, and three themes.
 
 ![ipad](docs/screenshots/theme-ipad.png)
 
@@ -8,21 +8,22 @@ A tiny personal macOS menu-bar app: hover the pointer at the **middle-right edge
 
 The panel is a tiny launcher/OS:
 
-- **Home screen** — two widget slots + an app grid (+ dock and search pill on themes that want them). Long-press anything → **edit mode** (jiggle): rebind a widget slot to any app, remove it, hit Done.
+- **Home screen** — 2–6 widget slots + an app grid (+ dock and search pill on themes that want them). Long-press anything → **edit mode** (jiggle): rebind a widget slot to any app, reorder slots, remove them, hit Done.
 - **Apps** — tap an icon to open the full app page:
-  - **Monitor** — CPU ring + per-core bars + history, Memory, Battery, Network, Disk, GPU (model identity; utilization isn't exposed by public macOS APIs), uptime
-  - **Battery / Network / Disk** — focused detail views with big sparklines
+  - **Monitor** — CPU ring + per-core bars + history + **live temperature (SMC)**, Memory, Battery, Network, Disk, GPU (model identity; utilization isn't exposed by public macOS APIs), uptime
+  - **Clipboard** — everything you copy system-wide, captured automatically (strings/links, last 50), searchable, tap to re-copy
   - **Settings** — everything below
+  - **Battery / Network / Disk** — focused detail views with big sparklines
 - **Home widgets** — any app's compact widget can sit on the home screen, so the data you care about is visible the instant the panel opens. Bindings persist.
 
 ## Themes
 
-Three themes on one theme-agnostic base — each theme picks its own **frame size**, **home template** (icon tiles / terminal list), **icon corner radius** (0.224 squircle for iPad, 0.5 circles for Vita bubbles), and decorations (dock, search pill, header clock):
+Three themes on one theme-agnostic base — each theme picks its own **frame size**, **home template** (icon tiles / terminal list), **icon corner radius**, and decorations (dock, search pill, header clock):
 
 | Theme | Frame | Look |
 |---|---|---|
 | **Liquid Glass** | 380×680 | dark vibrancy + drifting aurora |
-| **iPad** | **720×540 (4:3 landscape)** | light wallpaper, squircle icon grid, dock, search pill, clock |
+| **iPad** | **720×540 (4:3 landscape)** | light wallpaper, squircle icon grid, dock, clock |
 | **Cyberdeck** | 380×680 | phosphor terminal, scanlines, `» TEXT MENU` home template |
 
 ![cyberdeck](docs/screenshots/theme-cyberdeck.png)
@@ -31,17 +32,19 @@ Three themes on one theme-agnostic base — each theme picks its own **frame siz
 
 - **Panel size** — 75–125% scale of the theme frame, applied live
 - **Open/close animation** — Slide (edge drawer) / Pop (fade + bouncy spring) / Zoom (grows from the edge), plus a speed slider (0.15–0.5 s)
-- **Home widgets** — rebind either slot to any app
+- **Edge zone** — hot-zone width/height and show/hide dwell delays, live
+- **Home widgets** — slot count (2–6) and reorder chevrons per slot
+- **Alerts** — low-battery notifications at 20% and 10% (asks for notification permission once, on enable)
 - **Appearance** — theme picker
-- Reduce Motion is respected everywhere (fade-only entrance, static backgrounds, no jiggle)
+- Reduce Motion is respected everywhere (fade-only entrance, static backgrounds, no jiggle, instant theme switch)
 
 ## Behavior & controls
 
 - Hover the right-edge hot zone (middle 40% of screen height) → panel opens after a short dwell; move away → hides after a grace period. Works on every display.
-- **Pin** keeps the panel open while you interact.
-- **Switching themes while the panel is open is seamless**: the window snaps to the new theme's exact frame (flush right, vertically centered) while the old look dissolves into the new one — the window is the single sizing authority (`NSHostingView.sizingOptions = []`), so nothing re-anchors it.
+- **Pin** keeps the panel open while you interact; keyboard focus in the panel (e.g. clipboard search) also holds it open.
+- **Switching themes while the panel is open is a seamless morph**: the window animates to the new theme's exact frame (flush right, vertically centered) over the same 0.32 s curve the content crossfades — the panel visibly grows/shrinks between phone-card and iPad shapes with nothing re-anchoring it (`NSHostingView.sizingOptions = []` keeps the window the single sizing authority).
 - Menu bar: Show panel · Enabled · Theme submenu · Launch at Login · Quit.
-- Never steals keyboard focus; floats over fullscreen apps; no permissions needed (`NSEvent` monitors only).
+- Never steals keyboard focus; floats over fullscreen apps; no permissions needed (`NSEvent` monitors only). Notifications appear only if you enable low-battery alerts.
 
 ## Build & run
 
@@ -54,14 +57,17 @@ cp -R build/Sidecheck.app /Applications/   # to install
 
 ## Architecture notes
 
-- `Apps/PanelApp.swift` — `AppID` (monitor, settings) + `WidgetKind` (home widget flavors; battery/network/disk widgets open Monitor); adding an app = one case + `fullView` branch
-- `Apps/HomeStore.swift` — widget slots + edit mode, persisted (`homeWidgetSlots`)
+- `Apps/PanelApp.swift` — `AppID` (monitor, clipboard, settings) + `WidgetKind` (home widget flavors; battery/network/disk widgets open Monitor); adding an app = one case + `fullView` branch
+- `Apps/HomeStore.swift` — slot count + widget slots + edit mode, persisted (`homeSlotCount`, `homeWidgetSlots`)
 - `Apps/HomeScreen.swift` — theme-driven home (widget slots, grid/terminal launcher, dock)
+- `Apps/ClipboardStore.swift` — pasteboard change-count polling → 50-item history, persisted
 - `Apps/AppViews.swift` — full app pages + IORegistry GPU name helper
 - `ThemeStore.swift` — `ThemeSpec` design tokens incl. `frameSize`, `homeStyle`, `iconCornerRadiusRatio`
-- `PanelController.swift` — NSPanel, size scale, animation presets, live re-frame
-- `Widgets/StatsStore.swift` — 1 Hz CPU/memory/network + 15 s battery/disk/uptime sampling, 60-sample history
-- Panel settings persist: `themeID`, `panelScale`, `panelAnimationStyle`, `panelAnimationSpeed`, `homeWidgetSlots`
+- `PanelController.swift` — NSPanel, size scale, animation presets, live re-frame, theme-switch morph, edge-zone tuning
+- `SMC.swift` — read-only AppleSMC client (80-byte struct layout) for CPU temperature
+- `BatteryAlerter.swift` — shared IOKit battery read + 30 s alerter timer + UN notifications
+- `Widgets/StatsStore.swift` — 1 Hz CPU/memory/network + 5 s temperature + 15 s battery/disk/uptime sampling, 60-sample history
+- Panel settings persist: `themeID`, `panelScale`, `panelAnimationStyle`, `panelAnimationSpeed`, `homeSlotCount`, `homeWidgetSlots`, `hotZoneWidth`, `hotZoneSpan`, `showDwellDelay`, `hideDwellDelay`, `lowBatteryAlertsEnabled`, `clipboardItems`
 
 ## Dev/test hooks
 
@@ -69,14 +75,14 @@ cp -R build/Sidecheck.app /Applications/   # to install
 SIDECHECK_AUTOSHOW=1 SIDECHECK_OPENAPP=settings .build/release/Sidecheck
 ```
 
-`SIDECHECK_AUTOSHOW=1` pops (and pins) the panel 2 s after launch; `SIDECHECK_OPENAPP=<appId>` navigates to an app. Show/hide events log to stderr.
+`SIDECHECK_AUTOSHOW=1` pops (and pins) the panel 2 s after launch; `SIDECHECK_OPENAPP=<appId>` navigates to an app; `SIDECHECK_SETTHEME=<themeId>` live-switches the theme while open (for morph testing). Show/hide events log to stderr.
 
 ## Roadmap
 
-- [ ] More apps (top processes, now-playing)
+- [ ] More apps (top processes, now-playing, quick launch)
 - [ ] Multi-page home + drag-to-rearrange icons
 - [ ] More themes (the Vita bubble look may return as a template)
-- [ ] Configurable hot zone (edge side, width, span)
+- [ ] Global hotkey to toggle the panel
 
 ---
-*v0.3 — apps, themes, and knobs. Built overnight by an agent while its human slept.* 🌙
+*v0.4 — clipboard history, morphing themes, edge tuning. Still built by an agent and its human.* ✨

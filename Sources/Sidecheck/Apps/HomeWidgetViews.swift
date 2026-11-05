@@ -114,9 +114,10 @@ struct WidgetSlot: View {
                         .foregroundStyle(theme.textSecondary)
                     Spacer()
                     if home.isEditMode {
-                        Image(systemName: "arrow.triangle.2.circlepath")
-                            .font(.system(size: 10))
-                            .foregroundStyle(theme.textTertiary)
+                        HStack(spacing: 2) {
+                            moveButton(direction: -1, enabled: index > 0)
+                            moveButton(direction: 1, enabled: index < home.widgetSlots.count - 1)
+                        }
                     }
                 }
                 if let kind {
@@ -124,6 +125,20 @@ struct WidgetSlot: View {
                 }
             }
         }
+    }
+
+    private func moveButton(direction: Int, enabled: Bool) -> some View {
+        Button {
+            home.move(slot: index, direction: direction)
+        } label: {
+            Image(systemName: direction < 0 ? "chevron.left" : "chevron.right")
+                .font(.system(size: 9, weight: .bold))
+                .foregroundStyle(enabled ? theme.textSecondary : theme.textTertiary.opacity(0.35))
+                .padding(4)
+        }
+        .buttonStyle(.plain)
+        .disabled(!enabled)
+        .help(direction < 0 ? "Move left" : "Move right")
     }
 
     private var emptyChrome: some View {
@@ -221,13 +236,22 @@ struct MonitorHomeWidget: View {
                             .contentTransition(.numericText())
                     }
                     MeterBar(progress: stats.memoryUsage / 100)
-                    Text("MEM \(Int(stats.memoryUsage.rounded()))% · \(Format.bytes(stats.usedMemoryBytes))")
+                    Text(tempLine)
                         .font(.system(size: 9.5))
+                        .monospacedDigit()
                         .foregroundStyle(theme.textTertiary)
                 }
             }
             Sparkline(values: stats.cpuHistory, height: 22)
         }
+    }
+
+    private var tempLine: String {
+        var parts = ["MEM \(Int(stats.memoryUsage.rounded()))%", Format.bytes(stats.usedMemoryBytes)]
+        if let temp = stats.cpuTempC {
+            parts.append(String(format: "%.0f°C", temp))
+        }
+        return parts.joined(separator: " · ")
     }
 }
 
@@ -336,6 +360,37 @@ struct SettingsHomeWidget: View {
             Spacer()
             Image(systemName: "chevron.right")
                 .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(theme.textTertiary)
+        }
+    }
+}
+
+struct ClipboardHomeWidget: View {
+    @Environment(\.theme) private var theme
+    @EnvironmentObject var clipboard: ClipboardStore
+
+    var body: some View {
+        if let latest = clipboard.items.first {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(alignment: .top, spacing: 8) {
+                    Image(systemName: latest.text.lowercased().hasPrefix("http") ? "link" : "doc.on.doc")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(theme.accent)
+                        .padding(.top, 2)
+                    Text(latest.text)
+                        .font(.system(size: 11))
+                        .foregroundStyle(theme.textPrimary)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+                }
+                Text("\(clipboard.items.count) in history · \(Text(latest.date, format: .relative(presentation: .named)))")
+                    .font(.system(size: 9.5))
+                    .monospacedDigit()
+                    .foregroundStyle(theme.textTertiary)
+            }
+        } else {
+            Text("Copies land here automatically")
+                .font(.system(size: 11))
                 .foregroundStyle(theme.textTertiary)
         }
     }

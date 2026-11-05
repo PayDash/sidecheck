@@ -17,10 +17,16 @@ struct SettingsView: View {
                 sectionLabel("PANEL")
                 panelControls
 
+                sectionLabel("EDGE ZONE")
+                edgeControls
+
                 sectionLabel("HOME WIDGETS")
                 slotControls
 
-                Text("Sidecheck v0.3 — apps, themes, endless knobs")
+                sectionLabel("ALERTS")
+                alertControls
+
+                Text("Sidecheck v0.4 — clipboard, morphing themes, edge tuning")
                     .font(.system(size: 10))
                     .foregroundStyle(theme.textTertiary)
                     .frame(maxWidth: .infinity, alignment: .center)
@@ -92,16 +98,104 @@ struct SettingsView: View {
         }
     }
 
+    // MARK: Edge zone
+
+    private var edgeControls: some View {
+        ThemedCard {
+            VStack(alignment: .leading, spacing: 12) {
+                sliderRow(
+                    title: "Zone width",
+                    value: $controller.hotZoneWidth,
+                    range: Config.hotZoneWidthRange,
+                    display: { String(format: "%.0f pt", $0) }
+                )
+                sliderRow(
+                    title: "Zone height",
+                    value: $controller.hotZoneSpan,
+                    range: Config.hotZoneSpanRange,
+                    display: { String(format: "%.0f %%", $0 * 100) }
+                )
+                sliderRow(
+                    title: "Show delay",
+                    value: $controller.showDwellDelay,
+                    range: Config.dwellDelayRange,
+                    display: { String(format: "%.2f s", $0) }
+                )
+                sliderRow(
+                    title: "Hide delay",
+                    value: $controller.hideDwellDelay,
+                    range: Config.dwellDelayRange,
+                    display: { String(format: "%.2f s", $0) }
+                )
+                Text("The zone hugs the screen's right edge; delays smooth out accidental grazes.")
+                    .font(.system(size: 10))
+                    .foregroundStyle(theme.textTertiary)
+            }
+        }
+    }
+
+    private func sliderRow(
+        title: String,
+        value: Binding<Double>,
+        range: ClosedRange<Double>,
+        display: @escaping (Double) -> String
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text(title)
+                    .font(.system(size: 13))
+                    .foregroundStyle(theme.textPrimary)
+                Spacer()
+                Text(display(value.wrappedValue))
+                    .font(.system(size: 12, weight: .semibold))
+                    .monospacedDigit()
+                    .foregroundStyle(theme.textSecondary)
+                    .contentTransition(.numericText())
+            }
+            Slider(value: value, in: range)
+        }
+    }
+
     // MARK: Home widget slots
 
     private var slotControls: some View {
         VStack(spacing: 8) {
-            ForEach(home.widgetSlots.indices, id: \.self) { index in
+            VStack(alignment: .leading, spacing: 6) {
                 HStack {
+                    Text("Widget slots")
+                        .font(.system(size: 13))
+                        .foregroundStyle(theme.textPrimary)
+                    Spacer()
+                    Text("\(home.slotCount)")
+                        .font(.system(size: 12, weight: .semibold))
+                        .monospacedDigit()
+                        .foregroundStyle(theme.textSecondary)
+                        .contentTransition(.numericText())
+                }
+                Slider(
+                    value: Binding(
+                        get: { Double(home.slotCount) },
+                        set: { home.slotCount = Int($0.rounded()) }
+                    ),
+                    in: Double(Config.slotCountRange.lowerBound)...Double(Config.slotCountRange.upperBound),
+                    step: 1
+                )
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(theme.cardFill, in: RoundedRectangle(cornerRadius: theme.cardRadius * 0.7, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: theme.cardRadius * 0.7, style: .continuous)
+                    .strokeBorder(theme.cardStroke, lineWidth: 1)
+            )
+
+            ForEach(home.widgetSlots.indices, id: \.self) { index in
+                HStack(spacing: 10) {
                     Text("Slot \(index + 1)")
                         .font(.system(size: 13))
                         .foregroundStyle(theme.textPrimary)
                     Spacer()
+                    slotMoveButtons(index: index)
                     slotMenu(index: index)
                 }
                 .padding(.horizontal, 12)
@@ -112,9 +206,58 @@ struct SettingsView: View {
                         .strokeBorder(theme.cardStroke, lineWidth: 1)
                 )
             }
-            Text("Long-press a home widget to rebind it in place.")
+            Text("Long-press a home widget to rebind it; use the chevrons to reorder.")
                 .font(.system(size: 10))
                 .foregroundStyle(theme.textTertiary)
+        }
+    }
+
+    private func slotMoveButtons(index: Int) -> some View {
+        HStack(spacing: 2) {
+            slotMoveButton(index: index, direction: -1, enabled: index > 0)
+            slotMoveButton(index: index, direction: 1, enabled: index < home.widgetSlots.count - 1)
+        }
+    }
+
+    private func slotMoveButton(index: Int, direction: Int, enabled: Bool) -> some View {
+        Button {
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                home.move(slot: index, direction: direction)
+            }
+        } label: {
+            Image(systemName: direction < 0 ? "chevron.left" : "chevron.right")
+                .font(.system(size: 9, weight: .bold))
+                .foregroundStyle(enabled ? theme.textSecondary : theme.textTertiary.opacity(0.35))
+                .padding(4)
+        }
+        .buttonStyle(.plain)
+        .disabled(!enabled)
+        .help(direction < 0 ? "Move left" : "Move right")
+    }
+
+    // MARK: Alerts
+
+    private var alertControls: some View {
+        ThemedCard {
+            Toggle(isOn: Binding(
+                get: { controller.alerter.isEnabled },
+                set: { controller.alerter.isEnabled = $0 }
+            )) {
+                HStack(spacing: 10) {
+                    Image(systemName: "battery.25percent")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(theme.accent)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Low-battery alerts")
+                            .font(.system(size: 13))
+                            .foregroundStyle(theme.textPrimary)
+                        Text("Notify at 20% and 10% while on battery")
+                            .font(.system(size: 10))
+                            .foregroundStyle(theme.textTertiary)
+                    }
+                }
+            }
+            .toggleStyle(.switch)
         }
     }
 

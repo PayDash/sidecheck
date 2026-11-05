@@ -37,9 +37,13 @@ struct PanelView: View {
             themedPanel
                 .id(themes.current)
                 .transition(.opacity)
-                .animation(reduceMotion ? nil : .easeInOut(duration: 0.3), value: themes.current)
+                .animation(reduceMotion ? nil : .easeInOut(duration: Config.themeMorphDuration), value: themes.current)
         }
-        .frame(width: controller.currentFrameSize.width, height: controller.currentFrameSize.height)
+        // Fill the hosting view rather than pinning a fixed frame: the window
+        // is the sizing authority, and on a theme switch PanelController
+        // animates the window frame over Config.themeMorphDuration — content
+        // that fills the window morphs with it instead of fighting it.
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .clipShape(RoundedRectangle(cornerRadius: theme.panelRadius, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: theme.panelRadius, style: .continuous)
@@ -49,6 +53,7 @@ struct PanelView: View {
         .environmentObject(stats)
         .environmentObject(themes)
         .environmentObject(home)
+        .environmentObject(controller.clipboard)
         // entrance choreography: content springs in while the window appears
         .opacity(controller.isVisible ? 1 : 0)
         .scaleEffect(controller.isVisible || reduceMotion ? 1 : entranceScale, anchor: .trailing)

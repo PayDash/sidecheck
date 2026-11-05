@@ -46,6 +46,8 @@ final class PanelController: ObservableObject {
     let statsStore = StatsStore()
     let themeStore = ThemeStore()
     let homeStore = HomeStore()
+    let clipboard = ClipboardStore()
+    let alerter = BatteryAlerter()
 
     @Published private(set) var isVisible = false
     @Published var isPinned = false
@@ -69,6 +71,33 @@ final class PanelController: ObservableObject {
         didSet { UserDefaults.standard.set(animationSpeed, forKey: "panelAnimationSpeed") }
     }
 
+    // Live edge/hot-zone tuning — EdgeTracker reads these values through
+    // Config, so each didSet also pushes into the static Config vars.
+    @Published var hotZoneWidth: Double {
+        didSet {
+            Config.hotZoneWidth = hotZoneWidth
+            UserDefaults.standard.set(hotZoneWidth, forKey: "hotZoneWidth")
+        }
+    }
+    @Published var hotZoneSpan: Double {
+        didSet {
+            Config.hotZoneVerticalSpan = hotZoneSpan
+            UserDefaults.standard.set(hotZoneSpan, forKey: "hotZoneSpan")
+        }
+    }
+    @Published var showDwellDelay: Double {
+        didSet {
+            Config.showDwellDelay = showDwellDelay
+            UserDefaults.standard.set(showDwellDelay, forKey: "showDwellDelay")
+        }
+    }
+    @Published var hideDwellDelay: Double {
+        didSet {
+            Config.hideDwellDelay = hideDwellDelay
+            UserDefaults.standard.set(hideDwellDelay, forKey: "hideDwellDelay")
+        }
+    }
+
     private var currentScreen: NSScreen?
     private var cancellables = Set<AnyCancellable>()
 
@@ -79,19 +108,36 @@ final class PanelController: ObservableObject {
         panelScale = (scaleObject as? Double) ?? (scaleObject as? NSString)?.doubleValue ?? 1.0
         animationStyle = defaults.string(forKey: "panelAnimationStyle").flatMap(PanelAnimationStyle.init(rawValue:)) ?? .slide
         let speedObject = defaults.object(forKey: "panelAnimationSpeed")
-        animationSpeed = (speedObject as? Double) ?? (speedObject as? NSString)?.doubleValue ?? Config.slideDuration
+        animationSpeed = (speedObject as? Double) ?? (speedObject as? NSString)?.doubleValue ?? 0.25
+
+        func loadNumber(_ key: String, _ fallback: Double) -> Double {
+            let object = defaults.object(forKey: key)
+            return (object as? Double) ?? (object as? NSString)?.doubleValue ?? fallback
+        }
+        hotZoneWidth = loadNumber("hotZoneWidth", Double(Config.hotZoneWidth))
+        hotZoneSpan = loadNumber("hotZoneSpan", Double(Config.hotZoneVerticalSpan))
+        showDwellDelay = loadNumber("showDwellDelay", Config.showDwellDelay)
+        hideDwellDelay = loadNumber("hideDwellDelay", Config.hideDwellDelay)
+        // didSet doesn't fire during init — push the loaded values into
+        // Config explicitly so EdgeTracker reads the persisted tuning.
+        Config.hotZoneWidth = hotZoneWidth
+        Config.hotZoneVerticalSpan = hotZoneSpan
+        Config.showDwellDelay = showDwellDelay
+        Config.hideDwellDelay = hideDwellDelay
 
         // Theme switch while visible: on the next runloop tick (when the
-        // published change has settled) move the window to the new theme's
-        // exact frame. The SwiftUI content crossfades via view identity
-        // (PanelView) — no snapshots, no competing animations.
+        // published change has settled) morph the window to the new theme's
+        // exact frame — animated, in sync with the SwiftUI content crossfade
+        // (PanelView keys its transition on the same theme change). No
+        // snapshots, no competing animations; both halves share
+        // Config.themeMorphDuration.
         themeStore.$current
             .dropFirst()
             .sink { [weak self] _ in
                 DispatchQueue.main.async { [weak self] in
                     guard let self else { return }
                     self.applySystemAppearance()
-                    self.refreshFrame(animated: false)
+                    self.refreshFrame(animated: !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion)
                 }
             }
             .store(in: &cancellables)
@@ -123,6 +169,12 @@ final class PanelController: ObservableObject {
     /// without triggering a hide.
     var panelFrameIfVisible: CGRect? {
         isVisible ? panel.frame : nil
+    }
+
+    /// True while a panel control holds keyboard focus (e.g. the clipboard
+    /// search field) — auto-hide should wait until the user clicks away.
+    var panelIsKeyWindow: Bool {
+        panel.isKeyWindow
     }
 
     /// Current on-screen panel size: theme frame × user scale, clamped to
@@ -195,20 +247,26 @@ final class PanelController: ObservableObject {
         fputs("[Sidecheck] panel hidden\n", stderr)
     }
 
-    /// Re-frames the visible panel (size change and theme switches). Always
-    /// instant: the SwiftUI content re-renders on the same tick, so window
-    /// and content stay in lockstep — animated resizes would drift.
+    /// Re-frames the visible panel. Instant for scrubbing-style changes
+    /// (panel scale) where content re-renders on the same tick; animated for
+    /// theme switches, where the SwiftUI content is crossfading over the same
+    /// `Config.themeMorphDuration` — the two morph together as one panel.
     func refreshFrame(animated: Bool) {
         guard isVisible, let screen = currentScreen else { return }
-        panel.setFrame(shownFrame(on: screen), display: true)
-        panel.invalidateShadow()
+        let target = shownFrame(on: screen)
+        if animated, !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
+            animateFrame(to: target, timing: .easeInEaseOut, duration: Config.themeMorphDuration)
+        } else {
+            panel.setFrame(target, display: true)
+            panel.invalidateShadow()
+        }
     }
 
     // MARK: - Animation plumbing
 
-    private func animateFrame(to frame: CGRect, timing: CAMediaTimingFunctionName, completion: (() -> Void)? = nil) {
+    private func animateFrame(to frame: CGRect, timing: CAMediaTimingFunctionName, duration: TimeInterval? = nil, completion: (() -> Void)? = nil) {
         NSAnimationContext.runAnimationGroup({ context in
-            context.duration = animationSpeed
+            context.duration = duration ?? animationSpeed
             context.timingFunction = CAMediaTimingFunction(name: timing)
             context.allowsImplicitAnimation = true
             panel.animator().setFrame(frame, display: true)

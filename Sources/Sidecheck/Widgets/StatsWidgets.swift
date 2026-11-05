@@ -14,6 +14,18 @@ struct CPUCard: View {
                 HStack {
                     CardTitle(icon: "cpu", title: "CPU")
                     Spacer()
+                    if let temp = stats.cpuTempC {
+                        Text(String(format: "%.0f°C", temp))
+                            .font(.system(size: 11, weight: .semibold))
+                            .monospacedDigit()
+                            .foregroundStyle(theme.accent2)
+                            .contentTransition(.numericText())
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 3)
+                            .background(theme.cardFill, in: Capsule())
+                            .overlay(Capsule().strokeBorder(theme.cardStroke, lineWidth: 1))
+                            .transition(.opacity)
+                    }
                     Text("\(Int(stats.cpuUsage.rounded()))%")
                         .font(.system(size: 15, weight: .bold))
                         .monospacedDigit()

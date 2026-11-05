@@ -46,6 +46,7 @@ struct HomeScreen: View {
                     .frame(maxWidth: .infinity)
             }
         }
+        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: home.widgetSlots)
     }
 
     // MARK: app launcher
@@ -126,7 +127,7 @@ struct HomeScreen: View {
 
     private var dock: some View {
         HStack(spacing: 20) {
-            ForEach([AppID.monitor, .settings]) { id in
+            ForEach([AppID.monitor, .clipboard, .settings]) { id in
                 Button {
                     onOpenApp(id)
                 } label: {
