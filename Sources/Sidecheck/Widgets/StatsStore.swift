@@ -45,6 +45,9 @@ final class StatsStore: ObservableObject {
     private var previousLoads: [CPULoad]?
     private var previousNet: (rx: UInt64, tx: UInt64, at: Date)?
 
+    /// Diagnostics: sampling runs only while the panel is visible.
+    var isSampling: Bool { timer != nil }
+
     struct CPULoad {
         var user: UInt64 = 0
         var system: UInt64 = 0

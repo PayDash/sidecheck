@@ -66,6 +66,7 @@ cp -R build/Sidecheck.app /Applications/   # to install
 - `PanelController.swift` — NSPanel, size scale, animation presets, live re-frame, theme-switch morph, edge-zone tuning
 - `SMC.swift` — read-only AppleSMC client (80-byte struct layout) for CPU temperature
 - `BatteryAlerter.swift` — shared IOKit battery read + 30 s alerter timer + UN notifications
+- `PerfStore.swift` — 1 Hz self-sampling (task_info + proc_pid_rusage + proc_pidinfo) feeding Settings → Diagnostics; `proc_pid_rusage`'s buffer is a plain void* — pass the struct's address directly
 - `Widgets/StatsStore.swift` — 1 Hz CPU/memory/network + 5 s temperature + 15 s battery/disk/uptime sampling, 60-sample history
 - Panel settings persist: `themeID`, `panelScale`, `panelAnimationStyle`, `panelAnimationSpeed`, `homeSlotCount`, `homeWidgetSlots`, `hotZoneWidth`, `hotZoneSpan`, `showDwellDelay`, `hideDwellDelay`, `lowBatteryAlertsEnabled`, `clipboardItems`
 
@@ -75,7 +76,9 @@ cp -R build/Sidecheck.app /Applications/   # to install
 SIDECHECK_AUTOSHOW=1 SIDECHECK_OPENAPP=settings .build/release/Sidecheck
 ```
 
-`SIDECHECK_AUTOSHOW=1` pops (and pins) the panel 2 s after launch; `SIDECHECK_OPENAPP=<appId>` navigates to an app; `SIDECHECK_SETTHEME=<themeId>` live-switches the theme while open (for morph testing). Show/hide events log to stderr.
+`SIDECHECK_AUTOSHOW=1` pops (and pins) the panel 2 s after launch; `SIDECHECK_OPENAPP=<appId>` navigates to an app; `SIDECHECK_SETTHEME=<themeId>` live-switches the theme while open (for morph testing); `SIDECHECK_PERFLOG=1` prints one perf line to stderr every 5 s (CPU %, footprint, idle wakeups, syscalls, threads). Show/hide events log to stderr.
+
+**Perf invariants** (visible in Settings → Diagnostics): while **hidden** the app should sit at ≈0% CPU and single-digit wakeups/s — animated backgrounds pause whenever the window isn't visible. Visible-idle with an animated theme (aurora/CRT) is ~10% CPU by design; pick a static theme or slow the background cadence if that matters.
 
 ## Roadmap
 

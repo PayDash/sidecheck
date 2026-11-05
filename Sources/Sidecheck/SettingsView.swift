@@ -7,6 +7,7 @@ struct SettingsView: View {
     @EnvironmentObject var themes: ThemeStore
     @EnvironmentObject var controller: PanelController
     @EnvironmentObject var home: HomeStore
+    @EnvironmentObject var perf: PerfStore
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -25,6 +26,9 @@ struct SettingsView: View {
 
                 sectionLabel("ALERTS")
                 alertControls
+
+                sectionLabel("DIAGNOSTICS")
+                diagnosticsControls
 
                 Text("Sidecheck v0.4 — clipboard, morphing themes, edge tuning")
                     .font(.system(size: 10))
@@ -258,6 +262,121 @@ struct SettingsView: View {
                 }
             }
             .toggleStyle(.switch)
+        }
+    }
+
+    // MARK: Diagnostics
+
+    private var diagnosticsControls: some View {
+        VStack(spacing: 8) {
+            liveProcessCard
+            healthCard
+        }
+    }
+
+    private var liveProcessCard: some View {
+        ThemedCard {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    CardTitle(icon: "waveform.path.ecg", title: "Live process", tint: theme.accent2)
+                    Spacer()
+                    Text("1 Hz")
+                        .font(.system(size: 10, weight: .semibold))
+                        .monospacedDigit()
+                        .foregroundStyle(theme.textTertiary)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
+                        .background(theme.cardFill, in: Capsule())
+                        .overlay(Capsule().strokeBorder(theme.cardStroke, lineWidth: 1))
+                }
+                if let snapshot = perf.current {
+                    Sparkline(values: perf.samples.map { min($0.snapshot.cpuPercent / 10, 1) }, color: theme.accent2, height: 26)
+                    HStack(spacing: 14) {
+                        metric("CPU", String(format: "%.1f%%", snapshot.cpuPercent))
+                        metric("Memory", Format.bytes(snapshot.footprintBytes))
+                        metric("Wakeups", String(format: "%.0f/s", snapshot.idleWakeupsPerSec))
+                    }
+                    HStack(spacing: 14) {
+                        metric("Syscalls", String(format: "%.0f/s", snapshot.syscallsPerSec))
+                        metric("Ctx switches", String(format: "%.0f/s", snapshot.contextSwitchesPerSec))
+                        metric("Threads", "\(snapshot.threads)")
+                    }
+                    if let baseline = perf.hiddenBaseline {
+                        HStack(spacing: 6) {
+                            Image(systemName: "moon.zzz")
+                                .font(.system(size: 10, weight: .semibold))
+                                .foregroundStyle(theme.textTertiary)
+                            Text("Hidden baseline")
+                                .font(.system(size: 11))
+                                .foregroundStyle(theme.textSecondary)
+                            Spacer()
+                            Text(String(format: "%.1f%% · %.0f wakeups/s", baseline.cpuPercent, baseline.idleWakeupsPerSec))
+                                .font(.system(size: 11, weight: .semibold))
+                                .monospacedDigit()
+                                .foregroundStyle(theme.textPrimary)
+                                .contentTransition(.numericText())
+                        }
+                    }
+                    Text("Sparkline is 0–10% CPU. While hidden expect ≈0% CPU and single-digit wakeups/s; visible UI (animated backgrounds, 1 Hz stats) legitimately raises both.")
+                        .font(.system(size: 10))
+                        .foregroundStyle(theme.textTertiary)
+                } else {
+                    Text("Measuring — rates appear on the next tick…")
+                        .font(.system(size: 11))
+                        .foregroundStyle(theme.textTertiary)
+                }
+            }
+        }
+    }
+
+    private var healthCard: some View {
+        ThemedCard {
+            VStack(alignment: .leading, spacing: 8) {
+                CardTitle(icon: "checkmark.shield", title: "Health")
+                healthRow("Edge tracker", controller.edgeTracker.isRunning ? "Active" : "STOPPED",
+                          ok: controller.edgeTracker.isRunning)
+                healthRow("Clipboard capture",
+                          controller.clipboard.isPolling ? "On · \(controller.clipboard.items.count) items" : "OFF",
+                          ok: controller.clipboard.isPolling)
+                healthRow("Stats sampling",
+                          controller.statsStore.isSampling ? "Active (visible)" : "Idle (hidden)",
+                          ok: true)
+                healthRow("Battery alerts",
+                          controller.alerter.isEnabled ? "On — 20% / 10%" : "Off",
+                          ok: true)
+                healthRow("Panel", controller.isVisible ? "Visible" : "Hidden", ok: true)
+            }
+        }
+    }
+
+    private func metric(_ label: String, _ value: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(label)
+                .font(.system(size: 9.5))
+                .tracking(0.6)
+                .foregroundStyle(theme.textTertiary)
+            Text(value)
+                .font(.system(size: 13, weight: .semibold))
+                .monospacedDigit()
+                .foregroundStyle(theme.textPrimary)
+                .contentTransition(.numericText())
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func healthRow(_ name: String, _ state: String, ok: Bool) -> some View {
+        HStack(spacing: 8) {
+            Circle()
+                .fill(ok ? Color.green : Color.red)
+                .frame(width: 7, height: 7)
+            Text(name)
+                .font(.system(size: 12.5))
+                .foregroundStyle(theme.textPrimary)
+            Spacer()
+            Text(state)
+                .font(.system(size: 11, weight: .semibold))
+                .monospacedDigit()
+                .foregroundStyle(ok ? theme.textSecondary : Color.red)
         }
     }
 

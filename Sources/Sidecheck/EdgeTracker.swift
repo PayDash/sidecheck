@@ -23,6 +23,9 @@ final class EdgeTracker {
     private var showTimer: Timer?
     private var hideTimer: Timer?
 
+    /// Diagnostics: whether the event monitors are installed.
+    private(set) var isRunning = false
+
     func start() {
         let mask: NSEvent.EventTypeMask = [.mouseMoved, .leftMouseDragged, .otherMouseDragged]
 
@@ -33,9 +36,11 @@ final class EdgeTracker {
             DispatchQueue.main.async { self?.handlePointerMove() }
             return event
         }
+        isRunning = true
     }
 
     func stop() {
+        isRunning = false
         if let globalMonitor { NSEvent.removeMonitor(globalMonitor) }
         if let localMonitor { NSEvent.removeMonitor(localMonitor) }
         globalMonitor = nil

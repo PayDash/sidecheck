@@ -5,13 +5,13 @@ import ServiceManagement
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var statusItem: NSStatusItem?
     private let panelController = PanelController()
-    private let edgeTracker = EdgeTracker()
     private var isEnabled = true
     private var themeMenu: NSMenu?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         panelController.attachPanel()
 
+        let edgeTracker = panelController.edgeTracker
         edgeTracker.onShowRequested = { [weak self] screen in
             guard let self, self.isEnabled else { return }
             self.panelController.showPanel(on: screen)
@@ -30,6 +30,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         edgeTracker.start()
         panelController.clipboard.startPolling()
+        panelController.perf.visibilityProvider = { [weak self] in
+            self?.panelController.isVisible ?? false
+        }
+        panelController.perf.start()
         setupStatusItem()
 
         // Dev/test hooks: SIDECHECK_AUTOSHOW=1 pops (and pins) the panel

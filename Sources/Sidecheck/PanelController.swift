@@ -48,6 +48,8 @@ final class PanelController: ObservableObject {
     let homeStore = HomeStore()
     let clipboard = ClipboardStore()
     let alerter = BatteryAlerter()
+    let perf = PerfStore()
+    let edgeTracker = EdgeTracker()
 
     @Published private(set) var isVisible = false
     @Published var isPinned = false

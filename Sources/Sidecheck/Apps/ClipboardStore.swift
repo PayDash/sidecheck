@@ -29,6 +29,9 @@ final class ClipboardStore: ObservableObject {
     private var timer: Timer?
     private var flashTask: DispatchWorkItem?
 
+    /// Diagnostics: the pasteboard poller runs for the app's lifetime.
+    var isPolling: Bool { timer != nil }
+
     init() {
         lastChangeCount = NSPasteboard.general.changeCount
         if let data = UserDefaults.standard.data(forKey: Self.itemsKey),

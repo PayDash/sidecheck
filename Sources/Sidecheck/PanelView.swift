@@ -54,6 +54,7 @@ struct PanelView: View {
         .environmentObject(themes)
         .environmentObject(home)
         .environmentObject(controller.clipboard)
+        .environmentObject(controller.perf)
         // entrance choreography: content springs in while the window appears
         .opacity(controller.isVisible ? 1 : 0)
         .scaleEffect(controller.isVisible || reduceMotion ? 1 : entranceScale, anchor: .trailing)
@@ -73,7 +74,11 @@ struct PanelView: View {
     private var themedPanel: some View {
         let spec = themes.current.spec
         return ZStack {
-            ThemeBackground(id: themes.current, paused: reduceMotion)
+            // Pause the animated backgrounds whenever the panel can't be seen
+            // (hidden window) or shouldn't move (Reduce Motion) — otherwise
+            // TimelineView keeps rendering at display rate for nothing, which
+            // the diagnostics showed as ~8% CPU + ~60 wakeups/s while hidden.
+            ThemeBackground(id: themes.current, paused: reduceMotion || !controller.isVisible)
 
             VStack(spacing: 0) {
                 header
