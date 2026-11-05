@@ -12,6 +12,7 @@ The panel is a tiny launcher/OS:
 - **Apps** — tap an icon to open the full app page:
   - **Monitor** — CPU ring + per-core bars + history + **live temperature (SMC)**, Memory, Battery, Network, Disk, GPU (model identity; utilization isn't exposed by public macOS APIs), uptime
   - **Clipboard** — everything you copy system-wide, captured automatically (strings/links, last 50), searchable, tap to re-copy
+  - **Awake** — keep the Mac awake via `/usr/bin/caffeinate`: 1h / 2h / 4h / ∞ or a custom duration, countdown ring + optional home widget, "keep display awake" toggle. Lid closure survives on **AC power** (macOS blocks clamshell on battery — the app warns); sessions stop when Sidecheck quits
   - **Wallpaper** — per-theme backgrounds: the theme's animated look, any other theme's animated style, solid colors, gradient presets (+ angle), **pictures and videos with a pan/zoom crop editor** (drag + pinch/slider) so oversized media can be positioned exactly; videos loop muted (sound toggle) and pause while the panel is hidden; "apply to all themes" for one look everywhere
   - **Settings** — everything below
   - **Battery / Network / Disk** — focused detail views with big sparklines
@@ -61,6 +62,7 @@ cp -R build/Sidecheck.app /Applications/   # to install
 - `Apps/PanelApp.swift` — `AppID` (monitor, clipboard, settings) + `WidgetKind` (home widget flavors; battery/network/disk widgets open Monitor); adding an app = one case + `fullView` branch
 - `Apps/HomeStore.swift` — slot count + widget slots + edit mode, persisted (`homeSlotCount`, `homeWidgetSlots`)
 - `Apps/HomeScreen.swift` — theme-driven home (widget slots, grid/terminal launcher, dock)
+- `AwakeStore.swift` — /usr/bin/caffeinate child process (`-i -m -s [-d] [-t sec]`), stale-PID cleanup on launch, stops on quit
 - `Apps/ClipboardStore.swift` — pasteboard change-count polling → 50-item history, persisted
 - `Apps/WallpaperStore.swift` — per-theme `BackgroundSpec` persistence (`wallpaperSpecs`), image cache, looping AVPlayers
 - `Backgrounds.swift` — spec-driven `PanelBackgroundView` (theme / bubbles / blobs / CRT / solid / gradient / picture / video), glass bubbles, gradient presets
@@ -79,7 +81,7 @@ cp -R build/Sidecheck.app /Applications/   # to install
 SIDECHECK_AUTOSHOW=1 SIDECHECK_OPENAPP=settings .build/release/Sidecheck
 ```
 
-`SIDECHECK_AUTOSHOW=1` pops (and pins) the panel 2 s after launch; `SIDECHECK_OPENAPP=<appId>` navigates to an app; `SIDECHECK_SETTHEME=<themeId>` live-switches the theme while open (for morph testing); `SIDECHECK_PERFLOG=1` prints one perf line to stderr every 5 s (CPU %, footprint, idle wakeups, syscalls, threads). Show/hide events log to stderr.
+`SIDECHECK_AUTOSHOW=1` pops (and pins) the panel 2 s after launch; `SIDECHECK_OPENAPP=<appId>` navigates to an app; `SIDECHECK_SETTHEME=<themeId>` live-switches the theme while open (for morph testing); `SIDECHECK_PERFLOG=1` prints one perf line to stderr every 5 s (CPU %, footprint, idle wakeups, syscalls, threads); `SIDECHECK_AWAKE=<seconds>` starts an Awake session at launch (0 = infinite). Show/hide events log to stderr.
 
 **Perf invariants** (visible in Settings → Diagnostics): while **hidden** the app should sit at ≈0% CPU and single-digit wakeups/s — animated backgrounds, including video wallpapers, pause whenever the window isn't visible; all animations run at 30 fps. Visible-idle with an animated theme (bubbles/blobs/CRT) is ~7% CPU and a playing video wallpaper ~20% by design; solid colors and gradients are nearly free.
 
@@ -91,4 +93,4 @@ SIDECHECK_AUTOSHOW=1 SIDECHECK_OPENAPP=settings .build/release/Sidecheck
 - [ ] Global hotkey to toggle the panel
 
 ---
-*v0.5 — wallpaper app (animated / solid / gradients / pictures / videos with pan-zoom crop), glass bubbles, permission checker. Still built by an agent and its human.* 🎨
+*v0.6 — the Awake app (caffeinate, lid-closed on AC, custom timers). Still built by an agent and its human.* ☕

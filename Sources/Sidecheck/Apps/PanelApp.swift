@@ -6,6 +6,7 @@ enum AppID: String, CaseIterable, Identifiable {
     case monitor
     case clipboard
     case wallpaper
+    case awake
     case settings
 
     var id: String { rawValue }
@@ -20,6 +21,7 @@ enum WidgetKind: String, CaseIterable, Identifiable {
     case disk
     case clipboard
     case wallpaper
+    case awake
     case settings
 
     var id: String { rawValue }
@@ -29,6 +31,7 @@ enum WidgetKind: String, CaseIterable, Identifiable {
         case .monitor, .battery, .network, .disk: .monitor
         case .clipboard: .clipboard
         case .wallpaper: .wallpaper
+        case .awake: .awake
         case .settings: .settings
         }
     }
@@ -41,6 +44,7 @@ enum WidgetKind: String, CaseIterable, Identifiable {
         case .disk: "Disk"
         case .clipboard: "Clipboard"
         case .wallpaper: "Wallpaper"
+        case .awake: "Awake"
         case .settings: "Settings"
         }
     }
@@ -53,6 +57,7 @@ enum WidgetKind: String, CaseIterable, Identifiable {
         case .disk: "internaldrive"
         case .clipboard: "doc.on.clipboard"
         case .wallpaper: "paintpalette.fill"
+        case .awake: "cup.and.saucer.fill"
         case .settings: "gearshape.fill"
         }
     }
@@ -65,6 +70,7 @@ enum WidgetKind: String, CaseIterable, Identifiable {
         case .disk: .orange
         case .clipboard: .pink
         case .wallpaper: .teal
+        case .awake: .orange
         case .settings: .gray
         }
     }
@@ -79,6 +85,7 @@ enum WidgetKind: String, CaseIterable, Identifiable {
         case .disk: DiskHomeWidget()
         case .clipboard: ClipboardHomeWidget()
         case .wallpaper: WallpaperHomeWidget()
+        case .awake: AwakeHomeWidget()
         case .settings: SettingsHomeWidget()
         }
     }
@@ -94,6 +101,7 @@ struct PanelApp: Identifiable {
         .monitor: PanelApp(id: .monitor, name: "Monitor", symbol: "gauge.with.dots.needle.bottom.50percent", tint: .blue),
         .clipboard: PanelApp(id: .clipboard, name: "Clipboard", symbol: "doc.on.clipboard", tint: .pink),
         .wallpaper: PanelApp(id: .wallpaper, name: "Wallpaper", symbol: "paintpalette.fill", tint: .teal),
+        .awake: PanelApp(id: .awake, name: "Awake", symbol: "cup.and.saucer.fill", tint: .orange),
         .settings: PanelApp(id: .settings, name: "Settings", symbol: "gearshape.fill", tint: .gray),
     ]
 
@@ -108,6 +116,7 @@ extension AppID {
         case .monitor: MonitorAppView()
         case .clipboard: ClipboardAppView()
         case .wallpaper: WallpaperAppView()
+        case .awake: AwakeAppView()
         case .settings: SettingsAppView()
         }
     }

@@ -34,6 +34,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             self?.panelController.isVisible ?? false
         }
         panelController.perf.start()
+        // Dev/test hook: SIDECHECK_AWAKE=<seconds> starts an Awake session at
+        // launch (0 = infinite).
+        if let raw = ProcessInfo.processInfo.environment["SIDECHECK_AWAKE"],
+           let seconds = TimeInterval(raw) {
+            panelController.awake.start(duration: seconds > 0 ? seconds : nil)
+        }
         setupStatusItem()
 
         // Dev/test hooks: SIDECHECK_AUTOSHOW=1 pops (and pins) the panel
@@ -59,6 +65,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 }
             }
         }
+    }
+
+    /// Stop-on-quit policy: an Awake session never outlives the app.
+    func applicationWillTerminate(_ notification: Notification) {
+        panelController.awake.stop()
     }
 
     private func setupStatusItem() {

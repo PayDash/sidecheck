@@ -1,0 +1,125 @@
+import Foundation
+
+/// Keeps the Mac awake by running /usr/bin/caffeinate as a child process.
+///
+/// Flags: `-i` (idle sleep), `-m` (disk), `-s` (system sleep — the assertion
+/// that survives lid closure, honored by macOS only on AC power) and
+/// optionally `-d` (display). Timed sessions pass `-t <seconds>`; infinite
+/// sessions run without it. Sessions stop when Sidecheck quits; a stale child
+/// from a crashed run is cleaned up on the next launch.
+@MainActor
+final class AwakeStore: ObservableObject {
+    static let keepsDisplayKey = "awakeKeepsDisplay"
+    static let pidKey = "awakePID"
+    static let caffeinatePath = "/usr/bin/caffeinate"
+
+    @Published private(set) var isActive = false
+    /// nil while active means "infinite".
+    @Published private(set) var endDate: Date?
+    /// Total length of the current timed session (nil = infinite), for the countdown ring.
+    @Published private(set) var sessionDuration: TimeInterval?
+    @Published var keepsDisplayAwake: Bool {
+        didSet {
+            UserDefaults.standard.set(keepsDisplayAwake, forKey: Self.keepsDisplayKey)
+            // Apply immediately — restart the assertion with the new flags.
+            if isActive {
+                restart()
+            }
+        }
+    }
+
+    private var process: Process?
+
+    init() {
+        keepsDisplayAwake = UserDefaults.standard.object(forKey: Self.keepsDisplayKey) as? Bool ?? true
+        Self.terminateStaleChild()
+    }
+
+    /// Duration nil = infinite.
+    func start(duration: TimeInterval?) {
+        stop()
+        spawn(duration: duration)
+    }
+
+    func stop() {
+        guard let process else {
+            isActive = false
+            endDate = nil
+            sessionDuration = nil
+            return
+        }
+        if process.isRunning {
+            process.terminate()
+        }
+        self.process = nil
+        isActive = false
+        endDate = nil
+        sessionDuration = nil
+        UserDefaults.standard.removeObject(forKey: Self.pidKey)
+        fputs("[Sidecheck] awake: stopped\n", stderr)
+    }
+
+    var remaining: TimeInterval? {
+        guard isActive, let endDate else { return nil }
+        return max(0, endDate.timeIntervalSinceNow)
+    }
+
+    private func restart() {
+        guard isActive else { return }
+        let duration = endDate.map { $0.timeIntervalSinceNow }
+        spawn(duration: (duration ?? 0) > 1 ? duration : nil)
+    }
+
+    private func spawn(duration: TimeInterval?) {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: Self.caffeinatePath)
+        var arguments = ["-i", "-m", "-s"]
+        if keepsDisplayAwake {
+            arguments.append("-d")
+        }
+        if let duration {
+            arguments += ["-t", String(Int(duration.rounded()))]
+        }
+        process.arguments = arguments
+        process.terminationHandler = { [weak self] process in
+            MainActor.assumeIsolated {
+                guard let self, self.process === process else { return } // replaced or already stopped
+                self.process = nil
+                self.isActive = false
+                self.endDate = nil
+                self.sessionDuration = nil
+                UserDefaults.standard.removeObject(forKey: Self.pidKey)
+                fputs("[Sidecheck] awake: session ended (status \(process.terminationStatus))\n", stderr)
+            }
+        }
+        do {
+            try process.run()
+        } catch {
+            fputs("[Sidecheck] awake: failed to launch caffeinate — \(error)\n", stderr)
+            return
+        }
+        self.process = process
+        isActive = true
+        endDate = duration.map { Date().addingTimeInterval($0) }
+        sessionDuration = duration
+        UserDefaults.standard.set(process.processIdentifier, forKey: Self.pidKey)
+        fputs("[Sidecheck] awake: started pid \(process.processIdentifier) (\(arguments.joined(separator: " ")))\n", stderr)
+    }
+
+    /// If a previous run crashed (or nohan force-killed Sidecheck) while a
+    /// session was active, the caffeinate child may still be alive — kill it.
+    private static func terminateStaleChild() {
+        let defaults = UserDefaults.standard
+        let pid = defaults.integer(forKey: pidKey)
+        guard pid > 0 else { return }
+        defaults.removeObject(forKey: pidKey)
+        let kill = Process()
+        kill.executableURL = URL(fileURLWithPath: "/usr/bin/kill")
+        kill.arguments = [String(pid)]
+        kill.standardError = FileHandle.nullDevice
+        kill.standardOutput = FileHandle.nullDevice
+        try? kill.run()
+        kill.waitUntilExit()
+        fputs("[Sidecheck] awake: cleaned up stale session (pid \(pid))\n", stderr)
+    }
+}

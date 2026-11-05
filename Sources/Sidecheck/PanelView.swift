@@ -9,6 +9,7 @@ struct PanelView: View {
     @ObservedObject var themes: ThemeStore
     @ObservedObject var home: HomeStore
     @ObservedObject var wallpaper: WallpaperStore
+    @ObservedObject var awake: AwakeStore
 
     private var theme: ThemeSpec { themes.current.spec }
 
@@ -56,6 +57,7 @@ struct PanelView: View {
         .environmentObject(home)
         .environmentObject(controller.clipboard)
         .environmentObject(controller.wallpaper)
+        .environmentObject(controller.awake)
         .environmentObject(controller.perf)
         // entrance choreography: content springs in while the window appears
         .opacity(controller.isVisible ? 1 : 0)

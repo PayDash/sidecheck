@@ -423,6 +423,77 @@ struct WallpaperHomeWidget: View {
     }
 }
 
+struct AwakeHomeWidget: View {
+    @Environment(\.theme) private var theme
+    @EnvironmentObject var awake: AwakeStore
+
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 1)) { context in
+            HStack(spacing: 12) {
+                if awake.isActive {
+                    let remaining = awake.endDate.map { max(0, $0.timeIntervalSince(context.date)) }
+                    RingGauge(progress: ringProgress(remaining: remaining), lineWidth: 6) {
+                        Group {
+                            if let remaining {
+                                Text(Self.shortDuration(remaining))
+                                    .font(.system(size: 8.5, weight: .bold))
+                                    .monospacedDigit()
+                                    .foregroundStyle(theme.textPrimary)
+                            } else {
+                                Image(systemName: "infinity")
+                                    .font(.system(size: 11, weight: .bold))
+                                    .foregroundStyle(theme.textPrimary)
+                                    .themeGlow(theme)
+                            }
+                        }
+                    }
+                    .frame(width: 42, height: 42)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Awake")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(theme.textPrimary)
+                        Text(endLabel)
+                            .font(.system(size: 9.5))
+                            .monospacedDigit()
+                            .foregroundStyle(theme.textTertiary)
+                    }
+                    Spacer()
+                } else {
+                    Image(systemName: "cup.and.saucer")
+                        .font(.system(size: 14))
+                        .foregroundStyle(theme.textTertiary)
+                    Text("Mac sleeps normally")
+                        .font(.system(size: 11))
+                        .foregroundStyle(theme.textTertiary)
+                    Spacer()
+                }
+            }
+        }
+    }
+
+    private func ringProgress(remaining: TimeInterval?) -> Double {
+        guard let remaining else { return 1 }
+        guard let total = awake.sessionDuration, total > 0 else { return 1 }
+        return remaining / total
+    }
+
+    private var endLabel: String {
+        if let endDate = awake.endDate {
+            return "until " + endDate.formatted(date: .omitted, time: .shortened)
+        }
+        return "until stopped"
+    }
+
+    private static func shortDuration(_ interval: TimeInterval) -> String {
+        let total = Int(interval.rounded())
+        let hours = total / 3600
+        let minutes = (total % 3600) / 60
+        let seconds = total % 60
+        if hours > 0 { return String(format: "%d:%02d:%02d", hours, minutes, seconds) }
+        return String(format: "%d:%02d", minutes, seconds)
+    }
+}
+
 struct SettingsHomeWidget: View {
     @Environment(\.theme) private var theme
 
