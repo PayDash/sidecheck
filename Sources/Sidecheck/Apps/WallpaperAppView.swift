@@ -80,7 +80,7 @@ struct WallpaperAppView: View {
         ThemedCard {
             VStack(alignment: .leading, spacing: 10) {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 76), spacing: 8)], spacing: 8) {
-                    animatedTile(.theme, name: "Theme", colors: [theme.accent.opacity(0.7), theme.accent2.opacity(0.45)])
+                    animatedTile(.theme, name: "Current", colors: [theme.accent.opacity(0.7), theme.accent2.opacity(0.45)])
                     animatedTile(.bubbles, name: "Bubbles", colors: [Color.white.opacity(0.35), Color.blue.opacity(0.4)])
                     animatedTile(.blobs, name: "Blobs", colors: [Color(red: 0.93, green: 0.95, blue: 0.98), Color(red: 0.72, green: 0.82, blue: 1.0)])
                     animatedTile(.crt, name: "CRT", colors: [Color.black, Color(red: 0.05, green: 0.32, blue: 0.13)])

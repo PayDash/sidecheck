@@ -389,7 +389,7 @@ struct WallpaperHomeWidget: View {
 
     private var kindName: String {
         switch spec.kind {
-        case .theme: "Theme"
+        case .theme: "Current"
         case .bubbles: "Bubbles"
         case .blobs: "Blobs"
         case .crt: "CRT"

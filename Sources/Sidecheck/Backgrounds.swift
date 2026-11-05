@@ -330,16 +330,11 @@ enum GradientPresets {
     }
 
     static let all: [Preset] = [
-        Preset(id: "sunset", name: "Sunset", colors: [Color(red: 1.0, green: 0.42, blue: 0.34), Color(red: 0.98, green: 0.56, blue: 0.42), Color(red: 0.56, green: 0.32, blue: 0.72)]),
         Preset(id: "ocean", name: "Ocean", colors: [Color(red: 0.10, green: 0.46, blue: 0.82), Color(red: 0.13, green: 0.72, blue: 0.79), Color(red: 0.06, green: 0.25, blue: 0.45)]),
         Preset(id: "midnight", name: "Midnight", colors: [Color(red: 0.05, green: 0.07, blue: 0.18), Color(red: 0.13, green: 0.10, blue: 0.30), Color(red: 0.02, green: 0.03, blue: 0.08)]),
-        Preset(id: "candy", name: "Candy", colors: [Color(red: 1.0, green: 0.60, blue: 0.78), Color(red: 0.66, green: 0.80, blue: 1.0), Color(red: 0.85, green: 0.64, blue: 1.0)]),
-        Preset(id: "ember", name: "Ember", colors: [Color(red: 0.55, green: 0.09, blue: 0.05), Color(red: 0.92, green: 0.35, blue: 0.10), Color(red: 0.98, green: 0.71, blue: 0.25)]),
         Preset(id: "forest", name: "Forest", colors: [Color(red: 0.06, green: 0.29, blue: 0.20), Color(red: 0.15, green: 0.50, blue: 0.34), Color(red: 0.03, green: 0.15, blue: 0.12)]),
         Preset(id: "grape", name: "Grape", colors: [Color(red: 0.29, green: 0.10, blue: 0.44), Color(red: 0.52, green: 0.22, blue: 0.66), Color(red: 0.16, green: 0.05, blue: 0.26)]),
-        Preset(id: "peach", name: "Peach", colors: [Color(red: 1.0, green: 0.84, blue: 0.70), Color(red: 1.0, green: 0.64, blue: 0.60), Color(red: 0.99, green: 0.87, blue: 0.82)]),
         Preset(id: "slate", name: "Slate", colors: [Color(red: 0.14, green: 0.16, blue: 0.20), Color(red: 0.25, green: 0.28, blue: 0.34), Color(red: 0.08, green: 0.09, blue: 0.12)]),
-        Preset(id: "neon", name: "Neon", colors: [Color(red: 0.10, green: 0.95, blue: 0.70), Color(red: 0.16, green: 0.55, blue: 0.95), Color(red: 0.75, green: 0.25, blue: 0.90)]),
     ]
 
     static func byID(_ id: String?) -> Preset? {
