@@ -9,6 +9,10 @@ struct HomeScreen: View {
     let onOpenApp: (AppID) -> Void
 
     var body: some View {
+        homeContent
+    }
+
+    private var homeContent: some View {
         VStack(spacing: 0) {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 18) {
@@ -46,6 +50,7 @@ struct HomeScreen: View {
                     .frame(maxWidth: .infinity)
             }
         }
+        .compositingGroup()
         .animation(.spring(response: 0.35, dampingFraction: 0.85), value: home.widgetSlots)
     }
 

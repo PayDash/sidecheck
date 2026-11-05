@@ -79,13 +79,13 @@ struct PanelView: View {
         let spec = themes.current.spec
         return ZStack {
             // Wallpaper (per theme) drives the background; animated kinds stay
-            // paused whenever the panel can't be seen (hidden window) or
-            // shouldn't move (Reduce Motion) — otherwise TimelineView keeps
-            // rendering at display rate for nothing, which the diagnostics
-            // showed as ~8% CPU + ~60 wakeups/s while hidden. The background
-            // crossfades independently on wallpaper changes.
+            // paused once the panel is fully hidden (or under Reduce Motion) —
+            // but NOT during the open/close transition, so video wallpapers
+            // keep playing through the slide instead of freezing mid-motion.
+            // Fully-hidden pausing preserves the perf invariant from the
+            // diagnostics era (≈0% CPU while hidden).
             let wallpaperSpec = wallpaper.spec(for: themes.current)
-            PanelBackgroundView(spec: wallpaperSpec, themeID: themes.current, paused: reduceMotion || !controller.isVisible)
+            PanelBackgroundView(spec: wallpaperSpec, themeID: themes.current, paused: reduceMotion || controller.isFullyHidden)
                 .id(wallpaperSpec)
                 .transition(.opacity)
                 .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: wallpaperSpec)

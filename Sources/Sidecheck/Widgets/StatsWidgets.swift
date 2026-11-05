@@ -307,6 +307,5 @@ struct MeterBar: View {
             }
         }
         .frame(height: 8)
-        .animation(.spring(response: 0.55, dampingFraction: 0.9), value: progress)
     }
 }

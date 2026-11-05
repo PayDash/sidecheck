@@ -583,11 +583,7 @@ private struct ThemeSwatch: View {
                     .overlay {
                         Image(systemName: id.symbol)
                             .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(
-                                id == .ipad
-                                    ? Color.black.opacity(0.55)
-                                    : Color.white.opacity(0.9)
-                            )
+                            .foregroundStyle(Color.white.opacity(0.9))
                     }
                     .overlay {
                         if isSelected {

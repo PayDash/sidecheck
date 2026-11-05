@@ -25,7 +25,6 @@ Three themes on one theme-agnostic base — each theme picks its own **frame siz
 | Theme | Frame | Look |
 |---|---|---|
 | **Liquid Glass** | 380×680 | dark vibrancy + rising glass bubbles |
-| **iPad** | **720×540 (4:3 landscape)** | light wallpaper, squircle icon grid, dock, clock |
 | **Cyberdeck** | 380×680 | phosphor terminal, scanlines, `» TEXT MENU` home template |
 
 ![cyberdeck](docs/screenshots/theme-cyberdeck.png)
@@ -83,7 +82,7 @@ SIDECHECK_AUTOSHOW=1 SIDECHECK_OPENAPP=settings .build/release/Sidecheck
 
 `SIDECHECK_AUTOSHOW=1` pops (and pins) the panel 2 s after launch; `SIDECHECK_OPENAPP=<appId>` navigates to an app; `SIDECHECK_SETTHEME=<themeId>` live-switches the theme while open (for morph testing); `SIDECHECK_PERFLOG=1` prints one perf line to stderr every 5 s (CPU %, footprint, idle wakeups, syscalls, threads); `SIDECHECK_AWAKE=<seconds>` starts an Awake session at launch (0 = infinite). Show/hide events log to stderr.
 
-**Perf invariants** (visible in Settings → Diagnostics): while **hidden** the app should sit at ≈0% CPU and single-digit wakeups/s — animated backgrounds, including video wallpapers, pause whenever the window isn't visible; all animations run at 30 fps. Visible-idle with an animated theme (bubbles/blobs/CRT) is ~7% CPU and a playing video wallpaper ~20% by design; solid colors and gradients are nearly free.
+**Perf invariants** (visible in Settings → Diagnostics): while **hidden** the app should sit at ≈0% CPU and single-digit wakeups/s — animated backgrounds, including video wallpapers, pause once the hide animation finishes (they keep playing *through* the slide so nothing freezes mid-motion); all animations run at 30 fps. Stats sample at 0.5 Hz — at 1 Hz every widget text change re-armed a display-rate AppKit layout pass (~20% CPU). Solid colors and gradients are nearly free; bubbles/blobs/CRT ~8%; a playing video wallpaper ~20% by design.
 
 ## Roadmap
 

@@ -54,6 +54,10 @@ final class PanelController: ObservableObject {
     let edgeTracker = EdgeTracker()
 
     @Published private(set) var isVisible = false
+    /// True only once the hide animation has finished — animated backgrounds
+    /// (video wallpapers) pause on this, not on `isVisible`, so they keep
+    /// playing through the slide-out instead of freezing mid-transition.
+    @Published private(set) var isFullyHidden = true
     @Published var isPinned = false
 
     /// Test hook: the SwiftUI root navigates to this app when set.
@@ -162,6 +166,7 @@ final class PanelController: ObservableObject {
         panel.contentView = hostingView
         applySystemAppearance()
         homeStore.applyThemeLimit(themeStore.current.spec.maxHomeSlots)
+        wallpaper.warmUp(for: themeStore.current)
     }
 
     /// Light themes draw light system controls: without this, the segmented
@@ -203,6 +208,7 @@ final class PanelController: ObservableObject {
         guard let target = screen ?? NSScreen.withMouse ?? NSScreen.main else { return }
 
         isVisible = true
+        isFullyHidden = false
         currentScreen = target
         let shown = shownFrame(on: target)
         statsStore.startSampling()
@@ -234,6 +240,7 @@ final class PanelController: ObservableObject {
             animateFrame(to: hidden, timing: .easeIn) {
                 guard !self.isVisible else { return } // re-shown mid-animation
                 self.panel.orderOut(nil)
+                self.isFullyHidden = true
                 self.statsStore.stopSampling()
             }
         case .pop, .zoom:
@@ -246,6 +253,7 @@ final class PanelController: ObservableObject {
                     guard let self, !self.isVisible else { return } // re-shown mid-animation
                     self.panel.orderOut(nil)
                     self.panel.alphaValue = 1
+                    self.isFullyHidden = true
                     self.statsStore.stopSampling()
                 }
             })

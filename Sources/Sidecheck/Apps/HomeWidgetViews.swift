@@ -221,6 +221,10 @@ struct MonitorHomeWidget: View {
     @EnvironmentObject var stats: StatsStore
 
     var body: some View {
+        monitorContent
+    }
+
+    private var monitorContent: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 14) {
                 RingGauge(progress: stats.cpuUsage / 100, lineWidth: 6) { EmptyView() }
@@ -233,7 +237,6 @@ struct MonitorHomeWidget: View {
                             .font(.system(size: 11, weight: .bold))
                             .monospacedDigit()
                             .foregroundStyle(theme.textPrimary)
-                            .contentTransition(.numericText())
                     }
                     MeterBar(progress: stats.memoryUsage / 100)
                     Text(tempLine)

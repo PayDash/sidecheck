@@ -33,7 +33,7 @@ final class StatsStore: ObservableObject {
     // CPU temperature (°C, via SMC; nil when no sensor answers)
     @Published private(set) var cpuTempC: Double?
 
-    /// Rolling history for sparklines (last `historyCapacity` samples).
+    /// Rolling history for sparklines (last `historyCapacity` samples, 2 s apart).
     @Published private(set) var cpuHistory: [Double] = [] // 0...1
     @Published private(set) var netDownHistory: [Double] = [] // log-normalized 0...1
     @Published private(set) var netUpHistory: [Double] = [] // log-normalized 0...1
@@ -61,7 +61,10 @@ final class StatsStore: ObservableObject {
     func startSampling() {
         guard timer == nil else { return }
         sample() // prime the baselines; real values arrive on the next tick
-        timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+        // 0.5 Hz: every published tick re-renders the home widgets, and each
+        // change arms a display-rate layout pass (measured ~20% CPU at 1 Hz).
+        // Two-second samples keep the widgets glanceable at half the cost.
+        timer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.sample() } // timer runs on the main runloop
         }
     }

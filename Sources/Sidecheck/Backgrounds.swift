@@ -149,7 +149,6 @@ struct ThemeNativeBackground: View {
     var body: some View {
         switch id {
         case .liquidGlass: GlassBubblesBackground(paused: paused)
-        case .ipad: IPadBackground(paused: paused)
         case .cyberdeck: CyberdeckBackground(paused: paused)
         }
     }

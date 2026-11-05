@@ -24,11 +24,29 @@ final class WallpaperStore: ObservableObject {
         } else {
             data = nil
         }
-        if let data, let saved = try? JSONDecoder().decode([ThemeID: BackgroundSpec].self, from: data) {
-            specs = saved
+        // Decode keyed by raw String and map manually: a theme removed from
+        // the app (e.g. the iPad) must not fail the whole dictionary — its
+        // entry is simply dropped.
+        if let data,
+           let saved = try? JSONDecoder().decode([String: BackgroundSpec].self, from: data) {
+            var mapped: [ThemeID: BackgroundSpec] = [:]
+            for (raw, spec) in saved {
+                if let theme = ThemeID(rawValue: raw) {
+                    mapped[theme] = spec
+                }
+            }
+            specs = mapped
         } else {
             specs = [:]
         }
+    }
+
+    /// Pre-creates the AVPlayer for the active theme's video wallpaper so the
+    /// first hover-open doesn't stall on media loading.
+    func warmUp(for theme: ThemeID) {
+        let spec = self.spec(for: theme)
+        guard spec.kind == .video, let path = spec.filePath, Self.mediaExists(path) else { return }
+        _ = Self.videoPlayer(for: URL(fileURLWithPath: path))
     }
 
     func spec(for theme: ThemeID) -> BackgroundSpec {

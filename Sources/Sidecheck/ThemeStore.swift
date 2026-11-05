@@ -4,7 +4,6 @@ import SwiftUI
 
 enum ThemeID: String, CaseIterable, Identifiable, Codable {
     case liquidGlass
-    case ipad
     case cyberdeck
 
     var id: String { rawValue }
@@ -12,7 +11,6 @@ enum ThemeID: String, CaseIterable, Identifiable, Codable {
     var displayName: String {
         switch self {
         case .liquidGlass: "Liquid Glass"
-        case .ipad: "iPad"
         case .cyberdeck: "Cyberdeck"
         }
     }
@@ -20,7 +18,6 @@ enum ThemeID: String, CaseIterable, Identifiable, Codable {
     var symbol: String {
         switch self {
         case .liquidGlass: "drop"
-        case .ipad: "ipad.landscape"
         case .cyberdeck: "cpu"
         }
     }
@@ -86,34 +83,8 @@ struct ThemeSpec {
         iconLabelIsWhite: true,
     )
 
-    static let ipad = ThemeSpec(
-        id: .ipad,
-        panelRadius: 32,
-        cardRadius: 20,
-        fontDesign: .rounded,
-        accent: Color(red: 0.15, green: 0.45, blue: 0.98),
-        accent2: .teal,
-        textPrimary: Color(red: 0.12, green: 0.13, blue: 0.16),
-        textSecondary: Color(red: 0.12, green: 0.13, blue: 0.16).opacity(0.62),
-        textTertiary: Color(red: 0.12, green: 0.13, blue: 0.16).opacity(0.55),
-        cardFill: Color.white.opacity(0.62),
-        cardStroke: Color.white.opacity(0.65),
-        divider: Color.black.opacity(0.07),
-        glow: nil,
-        isLight: true,
-
-        // home template
-        frameSize: CGSize(width: 720, height: 540),
-        homeStyle: .iconTiles,
-        iconCornerRadiusRatio: 0.224,
-        showsDock: true,
-        showsSearchPill: false,
-        showsClockInHeader: true,
-        iconLabelIsWhite: true,
-    )
-
     /// How many home-widget slots fit this frame without crushing widget
-    /// content — phone-card themes get 2, the wide iPad gets the full range.
+    /// content — phone-card frames get 2, a future wide theme gets the full range.
     var maxHomeSlots: Int {
         frameSize.width >= 500 ? Config.slotCountRange.upperBound : 2
     }
@@ -149,7 +120,6 @@ extension ThemeID {
     var spec: ThemeSpec {
         switch self {
         case .liquidGlass: .liquidGlass
-        case .ipad: .ipad
         case .cyberdeck: .cyberdeck
         }
     }
@@ -158,7 +128,6 @@ extension ThemeID {
     var previewGradient: Gradient {
         switch self {
         case .liquidGlass: Gradient(colors: [Color.white.opacity(0.25), Color.white.opacity(0.06), Color.blue.opacity(0.5)])
-        case .ipad: Gradient(colors: [Color.white, Color(red: 0.75, green: 0.88, blue: 1.0)])
         case .cyberdeck: Gradient(colors: [Color.black, Color(red: 0.02, green: 0.2, blue: 0.08), Color(red: 0.22, green: 1.0, blue: 0.42)])
         }
     }
