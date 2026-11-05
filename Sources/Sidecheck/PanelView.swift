@@ -122,10 +122,6 @@ struct PanelView: View {
     private var header: some View {
         HStack(spacing: 10) {
             pinButton
-            Image(systemName: "sidebar.trailing")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(theme.accent)
-                .themeGlow(theme)
             Text(pageTitle)
                 .font(.system(size: 15, weight: .bold, design: theme.fontDesign))
                 .foregroundStyle(theme.textPrimary)
