@@ -281,6 +281,8 @@ struct BatteryHomeWidget: View {
                         Text(stats.isCharging ? "Charging" : "On battery")
                             .font(.system(size: 11, weight: .semibold))
                             .foregroundStyle(theme.textPrimary)
+                            .lineLimit(1)
+                            .fixedSize(horizontal: true, vertical: false)
                     }
                     Text("Reported by macOS")
                         .font(.system(size: 9.5))
