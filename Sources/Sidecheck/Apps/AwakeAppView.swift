@@ -34,9 +34,12 @@ struct AwakeAppView: View {
             .foregroundStyle(theme.textTertiary)
     }
 
+    /// Reads the stats store's already-sampled battery state — calling
+    /// BatteryInfo.current() here did IOKit/powerd XPC round-trips on every
+    /// body evaluation, stalling the slide animation each time the page
+    /// re-evaluated (stats publishes, layout passes). Never do IOKit in body.
     private var onBattery: Bool {
-        let battery = BatteryInfo.current()
-        return battery != nil && battery?.isCharging == false
+        stats.batteryPercent != nil && !stats.isCharging
     }
 
     // MARK: Status
