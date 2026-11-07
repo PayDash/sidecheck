@@ -511,6 +511,56 @@ struct AwakeHomeWidget: View {
     }
 }
 
+struct ScreenTimeHomeWidget: View {
+    @Environment(\.theme) private var theme
+    @EnvironmentObject var screenTime: ScreenTimeStore
+
+    var body: some View {
+        // Reads only the published snapshot (refreshed ≤1/min + on app
+        // switches) — no timers; a per-second-changing text in a home slot
+        // re-arms the AppKit layout storm.
+        if !screenTime.trackingEnabled {
+            HStack(spacing: 10) {
+                Image(systemName: "hourglass")
+                    .font(.system(size: 14))
+                    .foregroundStyle(theme.textTertiary)
+                Text("Screen Time off")
+                    .font(.system(size: 11))
+                    .foregroundStyle(theme.textTertiary)
+                Spacer()
+            }
+        } else {
+            HStack(spacing: 12) {
+                Image(systemName: "hourglass")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(theme.accent)
+                    .frame(width: 30, height: 30)
+                    .background(theme.accent.opacity(0.14), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(Format.duration(screenTime.snapshot.todayTotal))
+                        .font(.system(size: 13, weight: .bold))
+                        .monospacedDigit()
+                        .foregroundStyle(theme.textPrimary)
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: false)
+                    Text(topAppLine)
+                        .font(.system(size: 9.5))
+                        .foregroundStyle(theme.textTertiary)
+                        .lineLimit(1)
+                }
+                Spacer()
+            }
+        }
+    }
+
+    private var topAppLine: String {
+        if let top = screenTime.snapshot.todayApps.first {
+            return "Top · \(top.usage.name)"
+        }
+        return "No activity yet"
+    }
+}
+
 struct SettingsHomeWidget: View {
     @Environment(\.theme) private var theme
 

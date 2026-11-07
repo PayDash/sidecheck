@@ -180,6 +180,15 @@ enum Format {
         if hours > 0 { return "\(hours)h \(minutes)m" }
         return "\(minutes)m"
     }
+
+    /// Usage-style duration ("3h 42m", "45m") — Screen Time totals.
+    static func duration(_ seconds: Double) -> String {
+        let total = Int(seconds.rounded())
+        let hours = total / 3600
+        let minutes = (total % 3600) / 60
+        if hours > 0 { return "\(hours)h \(String(format: "%02d", minutes))m" }
+        return "\(minutes)m"
+    }
 }
 
 // MARK: - SwiftUI-native panel controls

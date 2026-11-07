@@ -62,6 +62,8 @@ cp -R build/Sidecheck.app /Applications/   # to install
 - `Apps/HomeStore.swift` — slot count + widget slots + edit mode, persisted (`homeSlotCount`, `homeWidgetSlots`)
 - `Apps/HomeScreen.swift` — theme-driven home (widget slots, grid/terminal launcher, dock)
 - `AwakeStore.swift` — /usr/bin/caffeinate child process (`-i -m -s [-d] [-t sec]`), stale-PID cleanup on launch, stops on quit
+- `Apps/ScreenTimeStore.swift` — foreground-app usage tracker (NSWorkspace activations + 1 s heartbeat, CGEventSource idle pause, lock/sleep/fast-user-switch suspensions), per-day JSON in UserDefaults, 90-day retention; zero permissions
+- `Apps/ScreenTimeAppView.swift` — Today/Week dashboard (Canvas bar chart, hour/day drill-down, Most Used with LaunchServices icons)
 - `Apps/ClipboardStore.swift` — pasteboard change-count polling → 50-item history, persisted
 - `Apps/WallpaperStore.swift` — per-theme `BackgroundSpec` persistence (`wallpaperSpecs`), image cache, looping AVPlayers
 - `Backgrounds.swift` — spec-driven `PanelBackgroundView` (theme / bubbles / blobs / CRT / solid / gradient / picture / video), glass bubbles, gradient presets
@@ -72,7 +74,7 @@ cp -R build/Sidecheck.app /Applications/   # to install
 - `BatteryAlerter.swift` — shared IOKit battery read + 30 s alerter timer + UN notifications
 - `PerfStore.swift` — 1 Hz self-sampling (task_info + proc_pid_rusage + proc_pidinfo) feeding Settings → Diagnostics; `proc_pid_rusage`'s buffer is a plain void* — pass the struct's address directly
 - `Widgets/StatsStore.swift` — 1 Hz CPU/memory/network + 5 s temperature + 15 s battery/disk/uptime sampling, 60-sample history
-- Panel settings persist: `themeID`, `panelScale`, `panelAnimationStyle`, `panelAnimationSpeed`, `homeSlotCount`, `homeWidgetSlots`, `wallpaperSpecs`, `hotZoneWidth`, `hotZoneSpan`, `showDwellDelay`, `hideDwellDelay`, `lowBatteryAlertsEnabled`, `clipboardItems`
+- Panel settings persist: `themeID`, `panelScale`, `panelAnimationStyle`, `panelAnimationSpeed`, `homeSlotCount`, `homeWidgetSlots`, `wallpaperSpecs`, `hotZoneWidth`, `hotZoneSpan`, `showDwellDelay`, `hideDwellDelay`, `lowBatteryAlertsEnabled`, `clipboardItems`, `screenTimeDays`, `screenTimeEnabled`, `screenTimeIdleMinutes`, `awakeKeepsDisplay`, `awakePID`
 
 ## Dev/test hooks
 
@@ -80,7 +82,7 @@ cp -R build/Sidecheck.app /Applications/   # to install
 SIDECHECK_AUTOSHOW=1 SIDECHECK_OPENAPP=settings .build/release/Sidecheck
 ```
 
-`SIDECHECK_AUTOSHOW=1` pops (and pins) the panel 2 s after launch; `SIDECHECK_OPENAPP=<appId>` navigates to an app; `SIDECHECK_SETTHEME=<themeId>` live-switches the theme while open (for morph testing); `SIDECHECK_PERFLOG=1` prints one perf line to stderr every 5 s (CPU %, footprint, idle wakeups, syscalls, threads); `SIDECHECK_AWAKE=<seconds>` starts an Awake session at launch (0 = infinite). Show/hide events log to stderr.
+`SIDECHECK_AUTOSHOW=1` pops (and pins) the panel 2 s after launch; `SIDECHECK_OPENAPP=<appId>` navigates to an app; `SIDECHECK_SETTHEME=<themeId>` live-switches the theme while open (for morph testing); `SIDECHECK_PERFLOG=1` prints one perf line to stderr every 5 s (CPU %, footprint, idle wakeups, syscalls, threads); `SIDECHECK_AWAKE=<seconds>` starts an Awake session at launch (0 = infinite); `SIDECHECK_SCREENTIME_SEED=<days>` fills Screen Time with deterministic synthetic history for chart verification; `SIDECHECK_SCREENTIME_LOG=1` logs tracker switches/flushes/idle pauses to stderr. Show/hide events log to stderr.
 
 **Perf invariants** (visible in Settings → Diagnostics): while **hidden** the app should sit at ≈0% CPU and single-digit wakeups/s — animated backgrounds, including video wallpapers, pause once the hide animation finishes (they keep playing *through* the slide so nothing freezes mid-motion); all animations run at 30 fps. Stats sample at 0.5 Hz — at 1 Hz every widget text change re-armed a display-rate AppKit layout pass (~20% CPU). Solid colors and gradients are nearly free; bubbles/blobs/CRT ~8%; a playing video wallpaper ~20% by design.
 
@@ -92,4 +94,4 @@ SIDECHECK_AUTOSHOW=1 SIDECHECK_OPENAPP=settings .build/release/Sidecheck
 - [ ] Global hotkey to toggle the panel
 
 ---
-*v0.6 — the Awake app (caffeinate, lid-closed on AC, custom timers). Still built by an agent and its human.* ☕
+*v0.7 — the Screen Time app (local app-usage tracking, Today/Week dashboard). Still built by an agent and its human.* ⏳

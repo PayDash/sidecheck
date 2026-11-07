@@ -50,6 +50,7 @@ final class PanelController: ObservableObject {
     let alerter = BatteryAlerter()
     let wallpaper = WallpaperStore()
     let awake = AwakeStore()
+    let screenTime = ScreenTimeStore()
     let perf = PerfStore()
     let edgeTracker = EdgeTracker()
 
@@ -156,7 +157,7 @@ final class PanelController: ObservableObject {
     /// initialized and can be captured by the SwiftUI root view.
     func attachPanel() {
         let hostingView = NSHostingView(
-            rootView: PanelView(controller: self, stats: statsStore, themes: themeStore, home: homeStore, wallpaper: wallpaper, awake: awake)
+            rootView: PanelView(controller: self, stats: statsStore, themes: themeStore, home: homeStore, wallpaper: wallpaper, awake: awake, screenTime: screenTime)
         )
         // The window is the single sizing authority (edge-anchored, centered).
         // Without this, the hosting view pushes its SwiftUI ideal size into

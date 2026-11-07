@@ -32,7 +32,7 @@ struct SettingsView: View {
                 sectionLabel("DIAGNOSTICS")
                 diagnosticsControls
 
-                Text("Sidecheck v0.4 — clipboard, morphing themes, edge tuning")
+                Text("Sidecheck v0.7 — screen time, awake, wallpaper, clipboard")
                     .font(.system(size: 10))
                     .foregroundStyle(theme.textTertiary)
                     .frame(maxWidth: .infinity, alignment: .center)
@@ -374,6 +374,11 @@ struct SettingsView: View {
                 healthRow("Battery alerts",
                           controller.alerter.isEnabled ? "On — 20% / 10%" : "Off",
                           ok: true)
+                healthRow("Screen Time tracker",
+                          controller.screenTime.trackingEnabled
+                              ? (controller.screenTime.isTracking ? "Recording" : "Starting…")
+                              : "Off",
+                          ok: controller.screenTime.trackingEnabled)
                 healthRow("Panel", controller.isVisible ? "Visible" : "Hidden", ok: true)
             }
         }

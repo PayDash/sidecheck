@@ -132,7 +132,7 @@ struct HomeScreen: View {
 
     private var dock: some View {
         HStack(spacing: 20) {
-            ForEach([AppID.monitor, .clipboard, .wallpaper, .awake, .settings]) { id in
+            ForEach([AppID.monitor, .clipboard, .wallpaper, .awake, .screenTime, .settings]) { id in
                 Button {
                     onOpenApp(id)
                 } label: {

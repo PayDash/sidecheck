@@ -62,6 +62,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             self?.panelController.isVisible ?? false
         }
         panelController.perf.start()
+        panelController.screenTime.startTracking()
         // Dev/test hook: SIDECHECK_AWAKE=<seconds> starts an Awake session at
         // launch (0 = infinite).
         if let raw = ProcessInfo.processInfo.environment["SIDECHECK_AWAKE"],
@@ -123,8 +124,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
     }
 
-    /// Stop-on-quit policy: an Awake session never outlives the app.
+    /// Stop-on-quit policy: an Awake session never outlives the app, and
+    /// tracked Screen Time is flushed before the process goes down.
     func applicationWillTerminate(_ notification: Notification) {
+        panelController.screenTime.flushNow()
         panelController.awake.stop()
     }
 
