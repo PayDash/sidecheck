@@ -158,7 +158,7 @@ struct AwakeAppView: View {
                         Text("Hours")
                             .font(.system(size: 10))
                             .foregroundStyle(theme.textTertiary)
-                        Slider(value: $customHours, in: 0...12, step: 1)
+                        PanelSlider(value: $customHours, range: 0...12, step: 1)
                         Text("\(Int(customHours)) h")
                             .font(.system(size: 11, weight: .semibold))
                             .monospacedDigit()
@@ -169,7 +169,7 @@ struct AwakeAppView: View {
                         Text("Minutes")
                             .font(.system(size: 10))
                             .foregroundStyle(theme.textTertiary)
-                        Slider(value: $customMinutes, in: 0...59, step: 1)
+                        PanelSlider(value: $customMinutes, range: 0...59, step: 1)
                         Text("\(Int(customMinutes)) min")
                             .font(.system(size: 11, weight: .semibold))
                             .monospacedDigit()
@@ -194,7 +194,7 @@ struct AwakeAppView: View {
                 .buttonStyle(.plain)
                 .disabled(customDuration < 60)
 
-                Toggle(isOn: $awake.keepsDisplayAwake) {
+                HStack(spacing: 10) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Keep display awake")
                             .font(.system(size: 12.5))
@@ -203,9 +203,9 @@ struct AwakeAppView: View {
                             .font(.system(size: 10))
                             .foregroundStyle(theme.textTertiary)
                     }
+                    Spacer()
+                    ThemeSwitch(isOn: $awake.keepsDisplayAwake)
                 }
-                .toggleStyle(.switch)
-                .controlSize(.mini)
             }
         }
     }

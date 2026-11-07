@@ -181,3 +181,81 @@ enum Format {
         return "\(minutes)m"
     }
 }
+
+// MARK: - SwiftUI-native panel controls
+
+/// SwiftUI-only slider for panel pages: the AppKit-backed `Slider` re-runs its
+/// Auto Layout engine on every frame of the window slide animation, stalling
+/// transitions (~500 ms measured). This one is pure shapes + drag.
+struct PanelSlider: View {
+    @Environment(\.theme) private var theme
+    @Binding var value: Double
+    let range: ClosedRange<Double>
+    var step: Double? = nil
+
+    var body: some View {
+        GeometryReader { geo in
+            let span = range.upperBound - range.lowerBound
+            let fraction = span > 0 ? (value - range.lowerBound) / span : 0
+            ZStack(alignment: .leading) {
+                Capsule()
+                    .fill(theme.divider)
+                    .frame(height: 6)
+                Capsule()
+                    .fill(LinearGradient(colors: [theme.accent, theme.accent2], startPoint: .leading, endPoint: .trailing))
+                    .frame(width: max(0, geo.size.width * CGFloat(fraction)), height: 6)
+                    .themeGlow(theme)
+                Circle()
+                    .fill(theme.textPrimary)
+                    .frame(width: 16, height: 16)
+                    .shadow(color: .black.opacity(0.4), radius: 3, y: 1)
+                    .offset(x: max(0, (geo.size.width - 16) * CGFloat(fraction)))
+            }
+            .frame(maxHeight: .infinity)
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture(minimumDistance: 0).onChanged { gesture in
+                    var f = (gesture.location.x - 8) / max(geo.size.width - 16, 1)
+                    f = min(max(f, 0), 1)
+                    var next = range.lowerBound + f * span
+                    if let step {
+                        next = (next / step).rounded() * step
+                    }
+                    value = min(max(next, range.lowerBound), range.upperBound)
+                }
+            )
+        }
+        .frame(height: 20)
+        .accessibilityLabel("Slider")
+    }
+}
+
+/// SwiftUI-only switch — same reason as PanelSlider: no AppKit control inside
+/// the sliding panel.
+struct ThemeSwitch: View {
+    @Environment(\.theme) private var theme
+    @Binding var isOn: Bool
+    var tint: Color? = nil
+
+    var body: some View {
+        Button {
+            withAnimation(.spring(response: 0.22, dampingFraction: 0.75)) {
+                isOn.toggle()
+            }
+        } label: {
+            Capsule()
+                .fill(isOn ? (tint ?? theme.accent).opacity(0.8) : theme.cardFill)
+                .frame(width: 34, height: 19)
+                .overlay(Capsule().strokeBorder(theme.cardStroke, lineWidth: 1))
+                .overlay(alignment: .leading) {
+                    Circle()
+                        .fill(Color.white)
+                        .frame(width: 15, height: 15)
+                        .shadow(color: .black.opacity(0.35), radius: 2, y: 1)
+                        .offset(x: isOn ? 16 : 2)
+                }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Toggle")
+    }
+}

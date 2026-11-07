@@ -67,6 +67,14 @@ final class PerfStore: ObservableObject {
     // MARK: - Sampling
 
     private func sample() {
+        let profile = ProcessInfo.processInfo.environment["SIDECHECK_SAMPLETIME"] == "1"
+        let t0 = profile ? Date() : nil
+        defer {
+            if let t0 {
+                let ms = Date().timeIntervalSince(t0) * 1000
+                if ms > 25 { fputs("[Sidecheck] perf.sample: \(Int(ms)) ms\n", stderr) }
+            }
+        }
         let now = Date()
         let cpuTime = currentCPUTimeMicro()
         let rusage = currentRusage()

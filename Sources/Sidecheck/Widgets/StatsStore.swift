@@ -77,17 +77,27 @@ final class StatsStore: ObservableObject {
     }
 
     private func sample() {
-        sampleCPU()
-        sampleMemory()
-        sampleNetwork()
+        // SIDECHECK_SAMPLETIME=1: report any sampling step slower than 25 ms
+        // (hunting the transition stalls; remove when done).
+        let profile = ProcessInfo.processInfo.environment["SIDECHECK_SAMPLETIME"] == "1"
+        func timed(_ name: String, _ body: () -> Void) {
+            guard profile else { body(); return }
+            let t0 = Date()
+            body()
+            let ms = Date().timeIntervalSince(t0) * 1000
+            if ms > 25 { fputs("[Sidecheck] sample.\(name): %.0f ms\n".replacingOccurrences(of: "%.0f", with: String(format: "%.0f", ms)), stderr) }
+        }
+        timed("cpu") { sampleCPU() }
+        timed("memory") { sampleMemory() }
+        timed("network") { sampleNetwork() }
         slowTick += 1
         if slowTick % 5 == 1 { // temperature changes slowly
-            cpuTempC = SMCTemp.cpuTemperature()
+            timed("temp") { cpuTempC = SMCTemp.cpuTemperature() }
         }
         if slowTick % 15 == 1 { // battery/disk/uptime change slowly
-            sampleBattery()
-            sampleDisk()
-            uptimeSeconds = ProcessInfo.processInfo.systemUptime
+            timed("battery") { sampleBattery() }
+            timed("disk") { sampleDisk() }
+            timed("uptime") { uptimeSeconds = ProcessInfo.processInfo.systemUptime }
         }
         recordHistory()
     }

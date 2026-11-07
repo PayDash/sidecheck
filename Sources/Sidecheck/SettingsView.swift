@@ -75,18 +75,18 @@ struct SettingsView: View {
                         .foregroundStyle(theme.textSecondary)
                         .contentTransition(.numericText())
                 }
-                Slider(value: $controller.panelScale, in: Config.panelScaleRange)
+                PanelSlider(value: $controller.panelScale, range: Config.panelScaleRange)
 
                 Text("Open / close animation")
                     .font(.system(size: 13))
                     .foregroundStyle(theme.textPrimary)
-                Picker("", selection: $controller.animationStyle) {
+                // SwiftUI pills — the AppKit segmented picker re-ran Auto
+                // Layout during panel transitions like the sliders did.
+                HStack(spacing: 8) {
                     ForEach(PanelAnimationStyle.allCases) { style in
-                        Text(style.displayName).tag(style)
+                        animationPill(style)
                     }
                 }
-                .pickerStyle(.segmented)
-                .labelsHidden()
 
                 HStack {
                     Text("Speed")
@@ -99,9 +99,25 @@ struct SettingsView: View {
                         .foregroundStyle(theme.textSecondary)
                         .contentTransition(.numericText())
                 }
-                Slider(value: $controller.animationSpeed, in: Config.animationSpeedRange)
+                PanelSlider(value: $controller.animationSpeed, range: Config.animationSpeedRange)
             }
         }
+    }
+
+    private func animationPill(_ style: PanelAnimationStyle) -> some View {
+        let isSelected = controller.animationStyle == style
+        return Button {
+            controller.animationStyle = style
+        } label: {
+            Text(style.displayName)
+                .font(.system(size: 12, weight: isSelected ? .semibold : .regular))
+                .foregroundStyle(isSelected ? theme.textPrimary : theme.textSecondary)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 7)
+                .background(isSelected ? theme.accent.opacity(0.15) : theme.cardFill, in: Capsule())
+                .overlay(Capsule().strokeBorder(isSelected ? theme.accent.opacity(0.6) : theme.cardStroke, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: Edge zone
@@ -158,7 +174,7 @@ struct SettingsView: View {
                     .foregroundStyle(theme.textSecondary)
                     .contentTransition(.numericText())
             }
-            Slider(value: value, in: range)
+            PanelSlider(value: value, range: range)
         }
     }
 
@@ -270,7 +286,11 @@ struct SettingsView: View {
                     }
                 }
             }
-            .toggleStyle(.switch)
+            Spacer()
+            ThemeSwitch(isOn: Binding(
+                get: { controller.alerter.isEnabled },
+                set: { controller.alerter.isEnabled = $0 }
+            ))
         }
     }
 

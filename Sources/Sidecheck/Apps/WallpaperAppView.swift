@@ -224,10 +224,10 @@ struct WallpaperAppView: View {
                             .foregroundStyle(theme.textSecondary)
                             .contentTransition(.numericText())
                     }
-                    Slider(value: Binding(
+                    PanelSlider(value: Binding(
                         get: { spec.gradientAngle },
                         set: { newValue in update { $0.gradientAngle = newValue } }
-                    ), in: 0...360)
+                    ), range: 0...360)
                 }
             }
         }
@@ -289,13 +289,15 @@ struct WallpaperAppView: View {
                                 .foregroundStyle(theme.textTertiary)
                                 .lineLimit(1)
                             Spacer()
-                            Toggle("Sound", isOn: Binding(
-                                get: { !spec.isMuted },
-                                set: { newValue in update { $0.isMuted = !newValue } }
-                            ))
-                            .font(.system(size: 11))
-                            .toggleStyle(.switch)
-                            .controlSize(.mini)
+                            HStack(spacing: 6) {
+                                Text("Sound")
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(theme.textSecondary)
+                                ThemeSwitch(isOn: Binding(
+                                    get: { !spec.isMuted },
+                                    set: { newValue in update { $0.isMuted = !newValue } }
+                                ))
+                            }
                             smallButton("Replace") { pickMedia(images: false) }
                         }
                     } else {

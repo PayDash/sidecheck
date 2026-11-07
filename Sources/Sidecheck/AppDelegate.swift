@@ -1,12 +1,40 @@
 import AppKit
 import ServiceManagement
 
+/// Logs main-runloop frame gaps — objective stutter measurement for
+/// transition profiling (SIDECHECK_FRAMERATE=1).
+final class FrameGapRecorder: NSObject {
+    private var link: CADisplayLink?
+    private var last: CFTimeInterval = 0
+    private var totalHitches = 0
+
+    func install() {
+        // macOS: display links come from NSScreen, not CADisplayLink's iOS init.
+        guard let screen = NSScreen.main else { return }
+        let link = screen.displayLink(target: self, selector: #selector(tick))
+        link.add(to: .main, forMode: .common)
+        self.link = link
+    }
+
+    @objc private func tick(_ link: CADisplayLink) {
+        let now = link.timestamp
+        defer { last = now }
+        guard last > 0 else { return }
+        let gap = now - last
+        if gap > 0.025 {
+            totalHitches += 1
+            fputs(String(format: "[Sidecheck] frame gap %.0f ms (#%d)\n", gap * 1000, totalHitches), stderr)
+        }
+    }
+}
+
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var statusItem: NSStatusItem?
     private let panelController = PanelController()
     private var isEnabled = true
     private var themeMenu: NSMenu?
+    private var frameGapRecorder: FrameGapRecorder?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         panelController.attachPanel()
@@ -39,6 +67,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if let raw = ProcessInfo.processInfo.environment["SIDECHECK_AWAKE"],
            let seconds = TimeInterval(raw) {
             panelController.awake.start(duration: seconds > 0 ? seconds : nil)
+        }
+        // Dev/test hook: SIDECHECK_FRAMERATE=1 logs main-thread frame gaps
+        // (>25 ms = a dropped frame at 30-60 fps) for transition profiling.
+        if ProcessInfo.processInfo.environment["SIDECHECK_FRAMERATE"] == "1" {
+            let recorder = FrameGapRecorder()
+            self.frameGapRecorder = recorder
+            recorder.install()
         }
         // Dev/test hook: SIDECHECK_CYCLE=<seconds> toggles the panel every
         // <seconds> after launch, for profiling open/close transitions.

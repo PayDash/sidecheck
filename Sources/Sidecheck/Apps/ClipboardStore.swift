@@ -54,6 +54,14 @@ final class ClipboardStore: ObservableObject {
     }
 
     private func poll() {
+        let profile = ProcessInfo.processInfo.environment["SIDECHECK_SAMPLETIME"] == "1"
+        let t0 = profile ? Date() : nil
+        defer {
+            if let t0 {
+                let ms = Date().timeIntervalSince(t0) * 1000
+                if ms > 25 { fputs("[Sidecheck] clip.poll: \(Int(ms)) ms\n", stderr) }
+            }
+        }
         let pasteboard = NSPasteboard.general
         guard pasteboard.changeCount != lastChangeCount else { return }
         lastChangeCount = pasteboard.changeCount
