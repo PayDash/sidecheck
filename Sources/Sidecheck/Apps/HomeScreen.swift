@@ -6,6 +6,7 @@ import SwiftUI
 struct HomeScreen: View {
     @Environment(\.theme) private var theme
     @EnvironmentObject var home: HomeStore
+    @EnvironmentObject var controller: PanelController
     let onOpenApp: (AppID) -> Void
 
     var body: some View {
@@ -130,13 +131,24 @@ struct HomeScreen: View {
         .help("Just for the vibe")
     }
 
+    /// Quick-launch dock. Settings lives in the panel header's gear instead.
+    private static let dockApps: [AppID] = [.monitor, .clipboard, .wallpaper, .awake]
+
     private var dock: some View {
-        HStack(spacing: 20) {
-            ForEach([AppID.monitor, .clipboard, .wallpaper, .awake, .screenTime, .settings]) { id in
+        // Tile size adapts to the app count (and panel scale) so this HStack
+        // always fits: its fixed-width tiles are incompressible, and an
+        // oversized dock widens the whole home VStack — clipping every page
+        // ~20 pt per side (the six-icon regression).
+        let count = CGFloat(Self.dockApps.count)
+        let spacing: CGFloat = Self.dockApps.count > 5 ? 14 : 20
+        let available = theme.frameSize.width * controller.panelScale - 76 // outer 16×2 + dock padding 22×2
+        let size = min(46, max(30, (available - spacing * (count - 1)) / count))
+        return HStack(spacing: spacing) {
+            ForEach(Self.dockApps) { id in
                 Button {
                     onOpenApp(id)
                 } label: {
-                    AppIconTile(app: PanelApp.app(id), size: 46, showsLabel: false)
+                    AppIconTile(app: PanelApp.app(id), size: size, showsLabel: false)
                 }
                 .buttonStyle(.plain)
                 .jiggle(active: home.isEditMode)
