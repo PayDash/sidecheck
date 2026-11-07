@@ -76,9 +76,9 @@ struct ListenSummary {
     var streams: Int?
 }
 
-/// The favorite key for a track — normalized across sources so a song starred
-/// in stats.fm history and the same song heard locally share one favorite.
-func trackFavoriteKey(title: String, artist: String) -> String {
+/// Normalized cross-source key for a track (used to dedupe the merged
+/// History list and to aggregate plays by song).
+func trackMergeKey(title: String, artist: String) -> String {
     "\(title.lowercased())|\(artist.lowercased())"
 }
 

@@ -50,40 +50,19 @@ struct HeardTrack: Codable, Identifiable {
     }
 }
 
-/// A favorite: tracks keyed by normalized "title|artist", artists by name.
-struct ListeningFavorites: Codable, Equatable {
-    var tracks: [String] = []
-    var artists: [String] = []
-
-    private enum CodingKeys: String, CodingKey { case tracks, artists }
-
-    init(tracks: [String] = [], artists: [String] = []) {
-        self.tracks = tracks
-        self.artists = artists
-    }
-
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        tracks = try container.decodeIfPresent([String].self, forKey: .tracks) ?? []
-        artists = try container.decodeIfPresent([String].self, forKey: .artists) ?? []
-    }
-}
-
 /// The always-on listening history: every track the MusicStore poll observes
-/// (panel open or closed) accumulates here, with play counts and favorites.
-/// Also serves as the "This Mac" ListeningStatsProvider — Top/History/Stats
-/// work with zero setup, and stats.fm just enriches them.
+/// (panel open or closed) accumulates here, with play counts. Also serves as
+/// the "This Mac" ListeningStatsProvider — Top/History/Stats work with zero
+/// setup, and stats.fm just enriches them.
 @MainActor
 final class ListeningStore: ObservableObject {
     static let historyKey = "listeningHistory"
-    static let favoritesKey = "listeningFavorites"
     static let retentionDays = 180
     static let capacity = 500
     /// A session must reach this to count as a play (skips skipped songs).
     private static let minPlaySeconds: Double = 20
 
     @Published private(set) var history: [HeardTrack] = [] // lastHeard desc
-    @Published private(set) var favorites = ListeningFavorites()
 
     private var heard: [String: HeardTrack] = [:]
     /// The track currently accumulating.
@@ -99,11 +78,6 @@ final class ListeningStore: ObservableObject {
             ?? defaults.string(forKey: Self.historyKey)?.data(using: .utf8),
            let saved = try? JSONDecoder().decode([String: HeardTrack].self, from: data) {
             heard = saved
-        }
-        if let data = defaults.data(forKey: Self.favoritesKey)
-            ?? defaults.string(forKey: Self.favoritesKey)?.data(using: .utf8),
-           let saved = try? JSONDecoder().decode(ListeningFavorites.self, from: data) {
-            favorites = saved
         }
         prune()
         republishHistory()
@@ -172,49 +146,6 @@ final class ListeningStore: ObservableObject {
         heard[key] = entry
         currentSessionSeconds = 0
         dirty = true
-    }
-
-    // MARK: Favorites
-
-    func isFavoriteTrack(title: String, artist: String) -> Bool {
-        favorites.tracks.contains(trackFavoriteKey(title: title, artist: artist))
-    }
-
-    func toggleFavoriteTrack(title: String, artist: String) {
-        let key = trackFavoriteKey(title: title, artist: artist)
-        if let index = favorites.tracks.firstIndex(of: key) {
-            favorites.tracks.remove(at: index)
-        } else {
-            favorites.tracks.insert(key, at: 0)
-        }
-        persistFavorites()
-    }
-
-    func isFavoriteArtist(_ name: String) -> Bool {
-        favorites.artists.contains(name.lowercased())
-    }
-
-    func toggleFavoriteArtist(_ name: String) {
-        let key = name.lowercased()
-        if let index = favorites.artists.firstIndex(of: key) {
-            favorites.artists.remove(at: index)
-        } else {
-            favorites.artists.insert(key, at: 0)
-        }
-        persistFavorites()
-    }
-
-    var favoriteTracks: [HeardTrack] {
-        history.filter { favorites.tracks.contains(trackFavoriteKey(title: $0.title, artist: $0.artist)) }
-    }
-
-    var favoriteArtistNames: [String] { favorites.artists }
-
-    private func persistFavorites() {
-        if let data = try? JSONEncoder().encode(favorites) {
-            UserDefaults.standard.set(data, forKey: Self.favoritesKey)
-        }
-        objectWillChange.send()
     }
 
     // MARK: ListeningStatsProvider (This Mac)

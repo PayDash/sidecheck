@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// The Music app: now-playing + transport, then listening stats — History,
-/// Top artists/tracks, summary Stats, and Favorites. Data comes from any
+/// Top artists/tracks, and summary Stats. Data comes from any
 /// ListeningStatsProvider: the local history store always, stats.fm when
 /// connected (username + optional token, nothing hardcoded).
 struct MusicAppView: View {
@@ -15,7 +15,6 @@ struct MusicAppView: View {
         case history = "History"
         case top = "Top"
         case stats = "Stats"
-        case favorites = "Favorites"
 
         var id: String { rawValue }
     }
@@ -60,7 +59,6 @@ struct MusicAppView: View {
                 case .history: historySection
                 case .top: topSection
                 case .stats: statsSection
-                case .favorites: favoritesSection
                 }
             }
             .padding(16)
@@ -177,7 +175,7 @@ struct MusicAppView: View {
         return entries
             .sorted { $0.playedAt > $1.playedAt }
             .filter { entry in
-                let key = trackFavoriteKey(title: entry.title, artist: entry.artist)
+                let key = trackMergeKey(title: entry.title, artist: entry.artist)
                 if let last = seen[key], abs(last.timeIntervalSince(entry.playedAt)) < 60 {
                     return false
                 }
@@ -187,8 +185,7 @@ struct MusicAppView: View {
     }
 
     private func streamRow(_ entry: StreamEntry) -> some View {
-        let favorite = listening.isFavoriteTrack(title: entry.title, artist: entry.artist)
-        return HStack(spacing: 10) {
+        HStack(spacing: 10) {
             RemoteThumb(url: entry.artworkURL, size: 30, theme: theme)
             VStack(alignment: .leading, spacing: 2) {
                 Text(entry.title)
@@ -201,21 +198,7 @@ struct MusicAppView: View {
                     .lineLimit(1)
             }
             Spacer()
-            starButton(favorite) {
-                listening.toggleFavoriteTrack(title: entry.title, artist: entry.artist)
-            }
         }
-    }
-
-    private func starButton(_ filled: Bool, action: @escaping () -> Void) -> some View {
-        Button {
-            action()
-        } label: {
-            Image(systemName: filled ? "star.fill" : "star")
-                .font(.system(size: 11))
-                .foregroundStyle(filled ? theme.accent : theme.textTertiary)
-        }
-        .buttonStyle(.plain)
     }
 
     // MARK: Top
@@ -283,9 +266,7 @@ struct MusicAppView: View {
                             id: rank.id,
                             label: rank.name,
                             plays: rank.playCount,
-                            artwork: rank.artworkURL,
-                            starred: listening.isFavoriteArtist(rank.name),
-                            onStar: { listening.toggleFavoriteArtist(rank.name) }
+                            artwork: rank.artworkURL
                         )
                     })
                 } else {
@@ -298,9 +279,7 @@ struct MusicAppView: View {
                             id: rank.id,
                             label: "\(rank.title) — \(rank.artist)",
                             plays: rank.playCount,
-                            artwork: rank.artworkURL,
-                            starred: listening.isFavoriteTrack(title: rank.title, artist: rank.artist),
-                            onStar: { listening.toggleFavoriteTrack(title: rank.title, artist: rank.artist) }
+                            artwork: rank.artworkURL
                         )
                     })
                 } else {
@@ -319,9 +298,7 @@ struct MusicAppView: View {
                             id: rank.id,
                             label: rank.name,
                             plays: rank.playCount,
-                            artwork: rank.artworkURL,
-                            starred: listening.isFavoriteArtist(rank.name),
-                            onStar: { listening.toggleFavoriteArtist(rank.name) }
+                            artwork: rank.artworkURL
                         )
                     })
                 }
@@ -335,9 +312,7 @@ struct MusicAppView: View {
                             id: rank.id,
                             label: "\(rank.title) — \(rank.artist)",
                             plays: rank.playCount,
-                            artwork: rank.artworkURL,
-                            starred: listening.isFavoriteTrack(title: rank.title, artist: rank.artist),
-                            onStar: { listening.toggleFavoriteTrack(title: rank.title, artist: rank.artist) }
+                            artwork: rank.artworkURL
                         )
                     })
                 }
@@ -350,11 +325,9 @@ struct MusicAppView: View {
         let label: String
         let plays: Int?
         let artwork: String?
-        let starred: Bool
-        let onStar: () -> Void
     }
 
-    /// Generic ranked rows: rank #, thumb, name, optional plays, meter, star.
+    /// Generic ranked rows: rank #, thumb, name, optional plays, meter.
     private func rankedList(_ items: [RankedRow]) -> some View {
         let maxPlays = items.compactMap(\.plays).max() ?? 0
         return VStack(alignment: .leading, spacing: 11) {
@@ -384,7 +357,6 @@ struct MusicAppView: View {
                     Spacer()
                     MeterBar(progress: maxPlays > 0 ? Double(item.plays ?? 0) / Double(maxPlays) : 1.0 / Double(index + 1))
                         .frame(width: 56)
-                    starButton(item.starred, action: item.onStar)
                 }
             }
         }
@@ -531,67 +503,6 @@ struct MusicAppView: View {
             RoundedRectangle(cornerRadius: theme.cardRadius * 0.8, style: .continuous)
                 .strokeBorder(theme.cardStroke, lineWidth: 1)
         )
-    }
-
-    // MARK: Favorites
-
-    private var favoritesSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            ThemedCard {
-                VStack(alignment: .leading, spacing: 11) {
-                    CardTitle(icon: "star.fill", title: "Favorite tracks")
-                    if listening.favoriteTracks.isEmpty {
-                        emptyCaption("Star tracks from History — they live here.")
-                    } else {
-                        ForEach(listening.favoriteTracks) { entry in
-                            HStack(spacing: 10) {
-                                RemoteThumb(url: entry.artworkURL, size: 30, theme: theme)
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(entry.title)
-                                        .font(.system(size: 12, weight: .medium))
-                                        .foregroundStyle(theme.textPrimary)
-                                        .lineLimit(1)
-                                    Text(entry.artist)
-                                        .font(.system(size: 9.5))
-                                        .foregroundStyle(theme.textTertiary)
-                                        .lineLimit(1)
-                                }
-                                Spacer()
-                                starButton(true) {
-                                    listening.toggleFavoriteTrack(title: entry.title, artist: entry.artist)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            ThemedCard {
-                VStack(alignment: .leading, spacing: 11) {
-                    CardTitle(icon: "star.fill", title: "Favorite artists")
-                    if listening.favoriteArtistNames.isEmpty {
-                        emptyCaption("Star artists from Top — they live here.")
-                    } else {
-                        ForEach(listening.favoriteArtistNames, id: \.self) { name in
-                            HStack(spacing: 10) {
-                                Image(systemName: "mic.fill")
-                                    .font(.system(size: 12))
-                                    .foregroundStyle(theme.accent)
-                                    .frame(width: 30, height: 30)
-                                    .background(theme.accent.opacity(0.12), in: RoundedRectangle(cornerRadius: 7, style: .continuous))
-                                Text(name)
-                                    .font(.system(size: 12, weight: .medium))
-                                    .foregroundStyle(theme.textPrimary)
-                                    .lineLimit(1)
-                                Spacer()
-                                starButton(true) {
-                                    listening.toggleFavoriteArtist(name)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
     }
 
     private func emptyCaption(_ text: String) -> some View {

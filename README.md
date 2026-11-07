@@ -99,4 +99,4 @@ SIDECHECK_AUTOSHOW=1 SIDECHECK_OPENAPP=settings .build/release/Sidecheck
 - [ ] Global hotkey to toggle the panel
 
 ---
-*v0.9 — listening stats: History / Top artists & tracks / Stats / Favorites in the Music app, powered by local background history + optional stats.fm. Still built by an agent and its human.* 🎧
+*v0.9 — listening stats: History / Top artists & tracks / Stats in the Music app, powered by local background history + optional stats.fm. Still built by an agent and its human.* 🎧
