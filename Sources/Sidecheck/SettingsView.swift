@@ -32,7 +32,7 @@ struct SettingsView: View {
                 sectionLabel("DIAGNOSTICS")
                 diagnosticsControls
 
-                Text("Sidecheck v0.10 — performance modes, listening stats")
+                Text("Sidecheck v0.11 — performance feature registry, listening stats")
                     .font(.system(size: 10))
                     .foregroundStyle(theme.textTertiary)
                     .frame(maxWidth: .infinity, alignment: .center)
@@ -372,7 +372,9 @@ struct SettingsView: View {
                           controller.statsStore.isSampling ? "Active (visible)" : "Idle (hidden)",
                           ok: true)
                 healthRow("Process sampling",
-                          controller.processes.isSampling ? "Active (visible)" : "Idle (hidden)",
+                          controller.processes.isSampling
+                              ? (controller.processes.isScanEnabled ? "Active (visible)" : "Paused (performance)")
+                              : "Idle (hidden)",
                           ok: true)
                 healthRow("Music",
                           controller.music.isPolling ? "Recording plays" : "Off",

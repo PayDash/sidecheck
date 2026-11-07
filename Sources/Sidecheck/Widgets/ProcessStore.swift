@@ -37,7 +37,12 @@ final class ProcessStore: ObservableObject {
     private var previousAt: Date?
     private var timer: Timer?
 
+    /// Performance features drive whether the scan runs at all (2 s / paused).
+    /// Wired in PanelController.init.
+    var featuresProvider: (() -> Set<PerformanceFeature>)?
+
     var isSampling: Bool { timer != nil }
+    var isScanEnabled: Bool { featuresProvider?().contains(.processScanning) ?? true }
 
     func startSampling() {
         guard timer == nil else { return }
@@ -62,6 +67,7 @@ final class ProcessStore: ObservableObject {
     }
 
     private func sample() {
+        guard isScanEnabled else { return } // paused by performance mode
         let profile = ProcessInfo.processInfo.environment["SIDECHECK_SAMPLETIME"] == "1"
         let t0 = profile ? Date() : nil
         defer {

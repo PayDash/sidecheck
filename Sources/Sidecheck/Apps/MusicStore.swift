@@ -36,7 +36,11 @@ final class MusicStore: ObservableObject {
     private var pollInFlight = false
     private var trackKey: String?
     private var artworkKey: String?
-    private var lastHiddenSpawn = Date.distantPast
+    private var lastSpawn = Date.distantPast
+
+    /// Performance features drive the visible cadence (3 s fast / 15 s
+    /// throttled). Wired in PanelController.init.
+    var featuresProvider: (() -> Set<PerformanceFeature>)?
 
     /// Set from AppDelegate: whether the panel is visible. Drives the adaptive
     /// cadence — 3 s visible, 15 s hidden.
@@ -95,14 +99,17 @@ final class MusicStore: ObservableObject {
     private func poll() {
         guard !pollInFlight else { return }
         // App-lifetime tracking with an adaptive cadence: 3 s while the panel
-        // is visible, 15 s hidden, and nothing at all when no player is
-        // running (an NSWorkspace check is free next to an osascript spawn).
+        // is visible (15 s with fastMusicPolling off), 15 s hidden, and
+        // nothing at all when no player is running (an NSWorkspace check is
+        // free next to an osascript spawn).
         let visible = visibilityProvider?() ?? true
+        let fast = featuresProvider?().contains(.fastMusicPolling) ?? true
+        let interval: TimeInterval = visible ? (fast ? 3 : 15) : 15
+        guard Date().timeIntervalSince(lastSpawn) >= interval else { return }
         if !visible {
-            guard Date().timeIntervalSince(lastHiddenSpawn) >= 15 else { return }
             guard Self.playerIsRunning() else { return }
-            lastHiddenSpawn = Date()
         }
+        lastSpawn = Date()
         pollInFlight = true
         queue.async { [weak self] in
             let result = Self.runOSA(Self.queryScript)

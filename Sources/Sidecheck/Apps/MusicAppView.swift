@@ -565,7 +565,7 @@ struct MusicAppView: View {
     /// bar renders once from the current position (no mounted timer).
     @ViewBuilder
     private func progressSection(_ track: TrackInfo) -> some View {
-        if music.isPlaying && controller.isVisible && !performance.reduceEffects {
+        if music.isPlaying && controller.isVisible && performance.isOn(.liveTickers) {
             TimelineView(.periodic(from: .now, by: 1)) { _ in
                 progressBar(track)
             }

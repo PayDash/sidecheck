@@ -271,6 +271,7 @@ struct MonitorHomeWidget: View {
 struct BatteryHomeWidget: View {
     @Environment(\.theme) private var theme
     @EnvironmentObject var stats: StatsStore
+    @EnvironmentObject var performance: PerformanceStore
 
     var body: some View {
         if let percent = stats.batteryPercent {
@@ -289,7 +290,7 @@ struct BatteryHomeWidget: View {
                             Image(systemName: "bolt.fill")
                                 .font(.system(size: 10, weight: .bold))
                                 .foregroundStyle(.green)
-                                .symbolEffect(.pulse, options: .repeating)
+                                .repeatingPulse(performance.isOn(.microAnimations))
                         }
                         Text(stats.isCharging ? "Charging" : "On battery")
                             .font(.system(size: 11, weight: .semibold))
@@ -441,7 +442,7 @@ struct AwakeHomeWidget: View {
         // re-armed the display-rate layout loop through panel transitions.
         // Saver mode keeps it static too.
         Group {
-            if awake.isActive && !performance.reduceEffects {
+            if awake.isActive && performance.isOn(.liveTickers) {
                 TimelineView(.periodic(from: .now, by: 1)) { context in
                     awakeContent(context.date)
                 }

@@ -100,14 +100,14 @@ struct PanelBackgroundView: View {
     let spec: BackgroundSpec
     let themeID: ThemeID
     var paused: Bool = false // Reduce Motion or hidden window freezes everything
-    var mode: PerformanceMode = .pretty // Saver freezes animation, Balanced pauses video
+    var features: Set<PerformanceFeature> = PerformanceMode.pretty.features()
 
     var body: some View {
         switch spec.kind {
         case .bubbles:
-            GlassBubblesBackground(paused: paused || mode == .saver)
+            GlassBubblesBackground(paused: paused || !features.contains(.animatedBackgrounds))
         case .crt:
-            CyberdeckBackground(paused: paused || mode == .saver)
+            CyberdeckBackground(paused: paused || !features.contains(.animatedBackgrounds))
         case .solid:
             (spec.color?.color ?? Color(red: 0.08, green: 0.09, blue: 0.12))
                 .ignoresSafeArea()
@@ -123,7 +123,7 @@ struct PanelBackgroundView: View {
             }
         case .video:
             if WallpaperStore.mediaExists(spec.filePath) {
-                WallpaperMediaView(path: spec.filePath, crop: spec.crop, paused: paused || mode != .pretty, video: true, muted: spec.isMuted)
+                WallpaperMediaView(path: spec.filePath, crop: spec.crop, paused: paused || !features.contains(.videoPlayback), video: true, muted: spec.isMuted)
             } else {
                 GlassBubblesBackground(paused: paused)
             }

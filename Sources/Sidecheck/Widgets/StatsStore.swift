@@ -44,6 +44,11 @@ final class StatsStore: ObservableObject {
     private var slowTick: Int = 0
     private var previousLoads: [CPULoad]?
     private var previousNet: (rx: UInt64, tx: UInt64, at: Date)?
+    private var lastSampleAt = Date.distantPast
+
+    /// Performance features drive the sampling cadence (2 s fast / 10 s
+    /// throttled). Wired in PanelController.init.
+    var featuresProvider: (() -> Set<PerformanceFeature>)?
 
     /// Diagnostics: sampling runs only while the panel is visible.
     var isSampling: Bool { timer != nil }
@@ -77,6 +82,13 @@ final class StatsStore: ObservableObject {
     }
 
     private func sample() {
+        // Performance cadence: 2 s with fastStatsPolling, 10 s without. The
+        // timer stays at 2 s and throttles here, so no restart is needed.
+        let fast = featuresProvider?().contains(.fastStatsPolling) ?? true
+        let now = Date()
+        guard now.timeIntervalSince(lastSampleAt) >= (fast ? 1.9 : 9.9) else { return }
+        lastSampleAt = now
+
         // SIDECHECK_SAMPLETIME=1: report any sampling step slower than 25 ms
         // (hunting the transition stalls; remove when done).
         let profile = ProcessInfo.processInfo.environment["SIDECHECK_SAMPLETIME"] == "1"

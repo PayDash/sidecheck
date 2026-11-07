@@ -125,13 +125,36 @@ struct RingGauge<Value: View>: View {
 }
 
 extension View {
-    /// Adds the theme's phosphor glow when the theme defines one.
+    /// Adds the theme's phosphor glow when the theme defines one. Flattened
+    /// when micro-animations are off (performance Saver/Custom).
     @ViewBuilder
     func themeGlow(_ theme: ThemeSpec? = nil) -> some View {
-        if let glow = theme?.glow {
-            self.shadow(color: glow.opacity(0.6), radius: 4)
+        modifier(ThemeGlowModifier(theme: theme))
+    }
+
+    /// `.symbolEffect(.pulse, options: .repeating)` only when ambient
+    /// micro-animations are on (performance microAnimations feature).
+    @ViewBuilder
+    func repeatingPulse(_ active: Bool) -> some View {
+        if active {
+            self.symbolEffect(.pulse, options: .repeating)
         } else {
             self
+        }
+    }
+}
+
+/// Modifier form of `themeGlow` so it can read the performance store from the
+/// environment.
+private struct ThemeGlowModifier: ViewModifier {
+    var theme: ThemeSpec?
+    @EnvironmentObject var performance: PerformanceStore
+
+    func body(content: Content) -> some View {
+        if let glow = theme?.glow, performance.isOn(.microAnimations) {
+            content.shadow(color: glow.opacity(0.6), radius: 4)
+        } else {
+            content
         }
     }
 }

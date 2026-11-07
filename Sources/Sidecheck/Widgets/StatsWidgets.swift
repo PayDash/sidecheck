@@ -104,6 +104,7 @@ struct MemoryCard: View {
 struct BatteryCard: View {
     @Environment(\.theme) private var theme
     @ObservedObject var stats: StatsStore
+    @EnvironmentObject var performance: PerformanceStore
 
     var body: some View {
         if let percent = stats.batteryPercent {
@@ -121,7 +122,7 @@ struct BatteryCard: View {
                                 Image(systemName: "bolt.fill")
                                     .font(.system(size: 11, weight: .bold))
                                     .foregroundStyle(.green)
-                                    .symbolEffect(.pulse, options: .repeating)
+                                    .repeatingPulse(performance.isOn(.microAnimations))
                             }
                             Text("\(percent)%")
                                 .font(.system(size: 14, weight: .bold))

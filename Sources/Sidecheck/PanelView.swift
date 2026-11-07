@@ -30,7 +30,7 @@ struct PanelView: View {
     /// Saver mode reuses the Reduce-Motion pathways: instant movement, no
     /// micro-animations. (Background freezing is handled inside
     /// PanelBackgroundView via `mode`.)
-    private var effectsOff: Bool { reduceMotion || performance.reduceEffects }
+    private var effectsOff: Bool { reduceMotion || !performance.isOn(.panelMovement) }
 
     // Entrance choreography follows the chosen animation preset.
     private var entranceSpring: Animation {
@@ -102,7 +102,7 @@ struct PanelView: View {
             // Fully-hidden pausing preserves the perf invariant from the
             // diagnostics era (≈0% CPU while hidden).
             let wallpaperSpec = wallpaper.spec(for: themes.current)
-            PanelBackgroundView(spec: wallpaperSpec, themeID: themes.current, paused: reduceMotion || controller.isFullyHidden, mode: performance.mode)
+            PanelBackgroundView(spec: wallpaperSpec, themeID: themes.current, paused: reduceMotion || controller.isFullyHidden, features: performance.activeFeatures)
                 .id(wallpaperSpec)
                 .transition(.opacity)
                 .animation(effectsOff ? nil : .easeInOut(duration: 0.25), value: wallpaperSpec)

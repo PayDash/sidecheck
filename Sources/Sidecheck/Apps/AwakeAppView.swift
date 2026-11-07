@@ -53,7 +53,7 @@ struct AwakeAppView: View {
                 // the ring every second, re-arming the display-rate layout
                 // loop through the open/close animation (measured stutter).
                 // Saver mode keeps it static too.
-                if awake.isActive && !performance.reduceEffects {
+                if awake.isActive && performance.isOn(.liveTickers) {
                     TimelineView(.periodic(from: .now, by: 1)) { context in
                         statusRing(context.date)
                     }

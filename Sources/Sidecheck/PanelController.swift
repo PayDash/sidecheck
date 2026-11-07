@@ -144,6 +144,12 @@ final class PanelController: ObservableObject {
             listening?.note(track: track, isPlaying: playing, at: at)
         }
 
+        // Performance features drive the stores' cadences (the integration
+        // template — one closure per store that wants to react).
+        statsStore.featuresProvider = { [weak performance] in performance?.activeFeatures ?? PerformanceMode.pretty.features() }
+        processes.featuresProvider = { [weak performance] in performance?.activeFeatures ?? PerformanceMode.pretty.features() }
+        music.featuresProvider = { [weak performance] in performance?.activeFeatures ?? PerformanceMode.pretty.features() }
+
         // Theme switch while visible: on the next runloop tick (when the
         // published change has settled) morph the window to the new theme's
         // exact frame — animated, in sync with the SwiftUI content crossfade
@@ -157,7 +163,7 @@ final class PanelController: ObservableObject {
                     guard let self else { return }
                     self.applySystemAppearance()
                     self.homeStore.applyThemeLimit(self.themeStore.current.spec.maxHomeSlots)
-                    self.refreshFrame(animated: !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion && !self.performance.reduceEffects)
+                    self.refreshFrame(animated: !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion && self.performance.isOn(.panelMovement))
                 }
             }
             .store(in: &cancellables)
@@ -226,7 +232,7 @@ final class PanelController: ObservableObject {
         processes.startSampling()
         music.startPolling() // idempotent — polling runs app-lifetime now
 
-        if performance.reduceEffects {
+        if !performance.isOn(.panelMovement) {
             // Saver: no slide/zoom — the panel is simply there.
             panel.setFrame(shown, display: false)
             panel.alphaValue = 1
@@ -256,7 +262,7 @@ final class PanelController: ObservableObject {
         guard force || !isPinned else { return } // pinned panels stay put
         isVisible = false
 
-        if performance.reduceEffects {
+        if !performance.isOn(.panelMovement) {
             // Saver: instant disappear, same bookkeeping as the animated paths.
             panel.orderOut(nil)
             isFullyHidden = true
@@ -304,7 +310,7 @@ final class PanelController: ObservableObject {
     func refreshFrame(animated: Bool) {
         guard isVisible, let screen = currentScreen else { return }
         let target = shownFrame(on: screen)
-        if animated, !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion, !performance.reduceEffects {
+        if animated, !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion, performance.isOn(.panelMovement) {
             animateFrame(to: target, timing: .easeInEaseOut, duration: Config.themeMorphDuration)
         } else {
             panel.setFrame(target, display: true)
