@@ -39,5 +39,5 @@ enum Config {
     static let hotZoneWidthRange: ClosedRange<Double> = 4...60
     static let hotZoneSpanRange: ClosedRange<Double> = 0.1...1.0
     static let dwellDelayRange: ClosedRange<Double> = 0...1.0
-    static let slotCountRange: ClosedRange<Int> = 2...6
+    static let slotCountRange: ClosedRange<Int> = 1...6
 }

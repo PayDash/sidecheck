@@ -279,6 +279,123 @@ struct Sparkline: View {
     }
 }
 
+// MARK: - Processes card
+
+/// Top processes by CPU or memory, with a two-tap kill (first tap arms a
+/// 3-second confirm so a mis-tap can't SIGTERM anything).
+struct ProcessesCard: View {
+    @Environment(\.theme) private var theme
+    @ObservedObject var processes: ProcessStore
+    @State private var confirmKill: Int32?
+
+    var body: some View {
+        ThemedCard {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    CardTitle(icon: "cpu", title: "Processes")
+                    Spacer()
+                    HStack(spacing: 6) {
+                        metricPill("CPU", .cpu)
+                        metricPill("MEM", .memory)
+                    }
+                }
+                if processes.processes.isEmpty {
+                    Text("Sampling…")
+                        .font(.system(size: 11))
+                        .foregroundStyle(theme.textTertiary)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.vertical, 8)
+                } else {
+                    let maxValue = processes.processes.map(value).max() ?? 0
+                    ForEach(processes.processes) { sample in
+                        row(sample, maxValue: maxValue)
+                    }
+                }
+            }
+        }
+    }
+
+    private var metric: ProcessMetric { processes.metric }
+
+    private func metricPill(_ label: String, _ candidate: ProcessMetric) -> some View {
+        Button {
+            processes.metric = candidate
+        } label: {
+            Text(label)
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(metric == candidate ? theme.accent : theme.textTertiary)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 4)
+                .background(theme.accent.opacity(metric == candidate ? 0.14 : 0), in: Capsule())
+                .overlay(Capsule().strokeBorder(metric == candidate ? theme.accent.opacity(0.5) : theme.cardStroke, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func value(_ sample: ProcessSample) -> Double {
+        switch metric {
+        case .cpu: sample.cpuPercent
+        case .memory: Double(sample.memBytes)
+        }
+    }
+
+    private func valueText(_ sample: ProcessSample) -> String {
+        switch metric {
+        case .cpu: String(format: "%.0f%%", sample.cpuPercent)
+        case .memory: Self.compactBytes(sample.memBytes)
+        }
+    }
+
+    /// "778M" / "1.2G" — Format.bytes wraps inside the card's value column.
+    private static func compactBytes(_ bytes: UInt64) -> String {
+        let mb = Double(bytes) / 1_048_576
+        if mb >= 1024 { return String(format: "%.1fG", mb / 1024) }
+        return "\(Int(mb.rounded()))M"
+    }
+
+    private func row(_ sample: ProcessSample, maxValue: Double) -> some View {
+        let armed = confirmKill == sample.pid
+        return HStack(spacing: 10) {
+            Text(sample.name)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(theme.textPrimary)
+                .lineLimit(1)
+            Spacer()
+            MeterBar(progress: maxValue > 0 ? value(sample) / maxValue : 0)
+                .frame(width: 74)
+            Text(valueText(sample))
+                .font(.system(size: 11, weight: .semibold))
+                .monospacedDigit()
+                .foregroundStyle(theme.textSecondary)
+                .frame(width: 52, alignment: .trailing)
+            Button {
+                if armed {
+                    confirmKill = nil
+                    processes.terminate(sample)
+                } else {
+                    confirmKill = sample.pid
+                    Task {
+                        try? await Task.sleep(for: .seconds(3))
+                        if confirmKill == sample.pid { confirmKill = nil }
+                    }
+                }
+            } label: {
+                Text(armed ? "Sure?" : "Kill")
+                    .font(.system(size: 9.5, weight: .semibold))
+                    .foregroundStyle(armed ? .white : theme.textTertiary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(
+                        armed ? Color.red.opacity(0.85) : theme.cardFill,
+                        in: Capsule()
+                    )
+                    .overlay(Capsule().strokeBorder(armed ? Color.red : theme.cardStroke, lineWidth: 1))
+            }
+            .buttonStyle(.plain)
+        }
+    }
+}
+
 // MARK: - Shared meter bar
 
 struct MeterBar: View {

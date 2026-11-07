@@ -8,6 +8,7 @@ enum AppID: String, CaseIterable, Identifiable {
     case wallpaper
     case awake
     case screenTime
+    case music
     case settings
 
     var id: String { rawValue }
@@ -20,21 +21,24 @@ enum WidgetKind: String, CaseIterable, Identifiable {
     case battery
     case network
     case disk
+    case topProcesses
     case clipboard
     case wallpaper
     case awake
     case screenTime
+    case music
     case settings
 
     var id: String { rawValue }
 
     var app: AppID {
         switch self {
-        case .monitor, .battery, .network, .disk: .monitor
+        case .monitor, .battery, .network, .disk, .topProcesses: .monitor
         case .clipboard: .clipboard
         case .wallpaper: .wallpaper
         case .awake: .awake
         case .screenTime: .screenTime
+        case .music: .music
         case .settings: .settings
         }
     }
@@ -45,10 +49,12 @@ enum WidgetKind: String, CaseIterable, Identifiable {
         case .battery: "Battery"
         case .network: "Network"
         case .disk: "Disk"
+        case .topProcesses: "Processes"
         case .clipboard: "Clipboard"
         case .wallpaper: "Wallpaper"
         case .awake: "Awake"
         case .screenTime: "Screen Time"
+        case .music: "Music"
         case .settings: "Settings"
         }
     }
@@ -59,10 +65,12 @@ enum WidgetKind: String, CaseIterable, Identifiable {
         case .battery: "battery.75percent"
         case .network: "wifi"
         case .disk: "internaldrive"
+        case .topProcesses: "cpu"
         case .clipboard: "doc.on.clipboard"
         case .wallpaper: "paintpalette.fill"
         case .awake: "cup.and.saucer.fill"
         case .screenTime: "hourglass"
+        case .music: "music.note"
         case .settings: "gearshape.fill"
         }
     }
@@ -73,10 +81,12 @@ enum WidgetKind: String, CaseIterable, Identifiable {
         case .battery: .green
         case .network: .purple
         case .disk: .orange
+        case .topProcesses: .mint
         case .clipboard: .pink
         case .wallpaper: .teal
         case .awake: .orange
         case .screenTime: .indigo
+        case .music: .red
         case .settings: .gray
         }
     }
@@ -89,11 +99,24 @@ enum WidgetKind: String, CaseIterable, Identifiable {
         case .battery: BatteryHomeWidget()
         case .network: NetworkHomeWidget()
         case .disk: DiskHomeWidget()
+        case .topProcesses: TopProcessesHomeWidget()
         case .clipboard: ClipboardHomeWidget()
         case .wallpaper: WallpaperHomeWidget()
         case .awake: AwakeHomeWidget()
         case .screenTime: ScreenTimeHomeWidget()
+        case .music: MusicHomeWidget()
         case .settings: SettingsHomeWidget()
+        }
+    }
+
+    /// The layout used when the home screen shows a single full-width slot.
+    @ViewBuilder
+    var wideWidget: some View {
+        switch self {
+        case .monitor: MonitorWideWidget()
+        case .screenTime: ScreenTimeWideWidget()
+        case .music: MusicWideWidget()
+        default: homeWidget
         }
     }
 }
@@ -110,6 +133,7 @@ struct PanelApp: Identifiable {
         .wallpaper: PanelApp(id: .wallpaper, name: "Wallpaper", symbol: "paintpalette.fill", tint: .teal),
         .awake: PanelApp(id: .awake, name: "Awake", symbol: "cup.and.saucer.fill", tint: .orange),
         .screenTime: PanelApp(id: .screenTime, name: "Screen Time", symbol: "hourglass", tint: .indigo),
+        .music: PanelApp(id: .music, name: "Music", symbol: "music.note", tint: .red),
         .settings: PanelApp(id: .settings, name: "Settings", symbol: "gearshape.fill", tint: .gray),
     ]
 
@@ -126,6 +150,7 @@ extension AppID {
         case .wallpaper: WallpaperAppView()
         case .awake: AwakeAppView()
         case .screenTime: ScreenTimeAppView()
+        case .music: MusicAppView()
         case .settings: SettingsAppView()
         }
     }

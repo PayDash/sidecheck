@@ -74,6 +74,8 @@ struct WidgetSlot: View {
     @EnvironmentObject var home: HomeStore
     let index: Int
     let onOpen: (AppID) -> Void
+    /// True when this is the single full-width slot — wide widget variants.
+    var wide = false
 
     private var kind: WidgetKind? {
         home.widgetSlots.indices.contains(index) ? home.widgetSlots[index] : nil
@@ -121,7 +123,11 @@ struct WidgetSlot: View {
                     }
                 }
                 if let kind {
-                    kind.homeWidget
+                    if wide {
+                        kind.wideWidget
+                    } else {
+                        kind.homeWidget
+                    }
                 }
             }
         }
@@ -607,6 +613,293 @@ struct ClipboardHomeWidget: View {
             Text("Copies land here automatically")
                 .font(.system(size: 11))
                 .foregroundStyle(theme.textTertiary)
+        }
+    }
+}
+
+// MARK: - Top processes
+
+struct TopProcessesHomeWidget: View {
+    @Environment(\.theme) private var theme
+    @EnvironmentObject var processes: ProcessStore
+
+    var body: some View {
+        // Updates at the store's 2 s cadence while the panel is visible only
+        // — the same accepted cost class as MonitorHomeWidget.
+        if let top = processes.processes.first {
+            VStack(alignment: .leading, spacing: 6) {
+                row(top, primary: true)
+                if let second = processes.processes.dropFirst().first {
+                    row(second, primary: false)
+                }
+            }
+        } else {
+            Text("Sampling processes…")
+                .font(.system(size: 11))
+                .foregroundStyle(theme.textTertiary)
+        }
+    }
+
+    private func row(_ sample: ProcessSample, primary: Bool) -> some View {
+        HStack(spacing: 8) {
+            Text(sample.name)
+                .font(.system(size: primary ? 11 : 10, weight: primary ? .semibold : .regular))
+                .foregroundStyle(primary ? theme.textPrimary : theme.textSecondary)
+                .lineLimit(1)
+            Spacer()
+            Text(value(sample))
+                .font(.system(size: primary ? 11 : 10, weight: .semibold))
+                .monospacedDigit()
+                .foregroundStyle(primary ? theme.textPrimary : theme.textTertiary)
+        }
+    }
+
+    private func value(_ sample: ProcessSample) -> String {
+        switch processes.metric {
+        case .cpu: String(format: "%.0f%%", sample.cpuPercent)
+        case .memory: Format.bytes(sample.memBytes)
+        }
+    }
+}
+
+// MARK: - Music
+
+struct MusicHomeWidget: View {
+    @Environment(\.theme) private var theme
+    @EnvironmentObject var music: MusicStore
+
+    var body: some View {
+        if let track = music.track {
+            HStack(spacing: 10) {
+                artworkThumb
+                    .frame(width: 34, height: 34)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(track.title)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(theme.textPrimary)
+                        .lineLimit(1)
+                    Text(track.artist)
+                        .font(.system(size: 9.5))
+                        .foregroundStyle(theme.textTertiary)
+                        .lineLimit(1)
+                }
+                Spacer()
+                Image(systemName: music.isPlaying ? "pause.circle.fill" : "play.circle.fill")
+                    .font(.system(size: 16))
+                    .foregroundStyle(theme.accent)
+                    .themeGlow(theme)
+            }
+        } else {
+            HStack(spacing: 10) {
+                Image(systemName: "music.note")
+                    .font(.system(size: 14))
+                    .foregroundStyle(theme.textTertiary)
+                Text("Nothing playing")
+                    .font(.system(size: 11))
+                    .foregroundStyle(theme.textTertiary)
+                Spacer()
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var artworkThumb: some View {
+        if let image = music.artwork {
+            Image(nsImage: image)
+                .resizable()
+                .scaledToFill()
+                .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+        } else {
+            RoundedRectangle(cornerRadius: 7, style: .continuous)
+                .fill(theme.cardFill)
+                .overlay(
+                    Image(systemName: "music.note")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(theme.textTertiary)
+                )
+                .overlay(RoundedRectangle(cornerRadius: 7, style: .continuous).strokeBorder(theme.cardStroke, lineWidth: 1))
+        }
+    }
+}
+
+// MARK: - Wide variants (single full-width slot)
+
+struct MonitorWideWidget: View {
+    @Environment(\.theme) private var theme
+    @EnvironmentObject var stats: StatsStore
+
+    var body: some View {
+        HStack(spacing: 14) {
+            RingGauge(progress: stats.cpuUsage / 100, lineWidth: 6) { EmptyView() }
+                .frame(width: 42, height: 42)
+            VStack(alignment: .leading, spacing: 5) {
+                HStack {
+                    Text("CPU").font(.system(size: 10)).foregroundStyle(theme.textTertiary)
+                    Spacer()
+                    Text("\(Int(stats.cpuUsage.rounded()))%")
+                        .font(.system(size: 11, weight: .bold))
+                        .monospacedDigit()
+                        .foregroundStyle(theme.textPrimary)
+                }
+                MeterBar(progress: stats.memoryUsage / 100)
+                Text("MEM \(Int(stats.memoryUsage.rounded()))% · \(Format.bytes(stats.usedMemoryBytes))")
+                    .font(.system(size: 9.5))
+                    .monospacedDigit()
+                    .foregroundStyle(theme.textTertiary)
+            }
+            Divider().overlay(theme.divider).frame(height: 36)
+            VStack(alignment: .leading, spacing: 4) {
+                rateRow("arrow.down", color: .blue, value: stats.netDownBps)
+                rateRow("arrow.up", color: .purple, value: stats.netUpBps)
+                if let temp = stats.cpuTempC {
+                    Text(String(format: "%.0f°C", temp))
+                        .font(.system(size: 9.5))
+                        .monospacedDigit()
+                        .foregroundStyle(theme.textTertiary)
+                }
+            }
+            Sparkline(values: stats.cpuHistory, height: 30)
+                .frame(width: 88)
+        }
+    }
+
+    private func rateRow(_ symbol: String, color: Color, value: Double) -> some View {
+        HStack(spacing: 5) {
+            Image(systemName: symbol)
+                .font(.system(size: 9, weight: .bold))
+                .foregroundStyle(color)
+            Text(Format.rate(value))
+                .font(.system(size: 10, weight: .semibold))
+                .monospacedDigit()
+                .foregroundStyle(theme.textSecondary)
+        }
+    }
+}
+
+struct ScreenTimeWideWidget: View {
+    @Environment(\.theme) private var theme
+    @EnvironmentObject var screenTime: ScreenTimeStore
+
+    var body: some View {
+        HStack(spacing: 14) {
+            Image(systemName: "hourglass")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(theme.accent)
+                .frame(width: 34, height: 34)
+                .background(theme.accent.opacity(0.14), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            VStack(alignment: .leading, spacing: 3) {
+                Text(Format.duration(screenTime.snapshot.todayTotal))
+                    .font(.system(size: 14, weight: .bold))
+                    .monospacedDigit()
+                    .foregroundStyle(theme.textPrimary)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
+                Text(topAppLine)
+                    .font(.system(size: 9.5))
+                    .foregroundStyle(theme.textTertiary)
+                    .lineLimit(1)
+            }
+            Spacer()
+            MiniBars(values: screenTime.snapshot.todayHourly)
+                .frame(width: 150, height: 34)
+        }
+    }
+
+    private var topAppLine: String {
+        if let top = screenTime.snapshot.todayApps.first {
+            return "Top · \(top.usage.name)"
+        }
+        return "No activity yet"
+    }
+}
+
+/// Tiny bar chart for the wide Screen Time widget — 24 silent hour bars.
+struct MiniBars: View {
+    @Environment(\.theme) private var theme
+    let values: [Double]
+
+    var body: some View {
+        Canvas { context, size in
+            let count = values.count
+            guard count > 0 else { return }
+            let maxValue = max((values.max() ?? 0) * 1.05, 1)
+            let slot = size.width / CGFloat(count)
+            let barWidth = min(slot * 0.62, 5)
+            for (index, value) in values.enumerated() {
+                let height = size.height * CGFloat(min(value / maxValue, 1))
+                guard height > 0.8 else { continue }
+                let x = CGFloat(index) * slot + (slot - barWidth) / 2
+                let rect = CGRect(x: x, y: size.height - height, width: barWidth, height: height)
+                context.fill(
+                    Path(roundedRect: rect, cornerRadius: barWidth / 2, style: .continuous),
+                    with: .linearGradient(
+                        Gradient(colors: [theme.accent2, theme.accent.opacity(0.55)]),
+                        startPoint: CGPoint(x: 0, y: size.height - height),
+                        endPoint: CGPoint(x: 0, y: size.height)
+                    )
+                )
+            }
+        }
+    }
+}
+
+struct MusicWideWidget: View {
+    @Environment(\.theme) private var theme
+    @EnvironmentObject var music: MusicStore
+
+    var body: some View {
+        if let track = music.track {
+            HStack(spacing: 12) {
+                artworkThumb
+                    .frame(width: 38, height: 38)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(track.title)
+                        .font(.system(size: 11.5, weight: .semibold))
+                        .foregroundStyle(theme.textPrimary)
+                        .lineLimit(1)
+                    Text(track.artist)
+                        .font(.system(size: 9.5))
+                        .foregroundStyle(theme.textTertiary)
+                        .lineLimit(1)
+                }
+                Spacer()
+                Text(track.player)
+                    .font(.system(size: 9))
+                    .foregroundStyle(theme.textTertiary)
+                Image(systemName: music.isPlaying ? "pause.circle.fill" : "play.circle.fill")
+                    .font(.system(size: 16))
+                    .foregroundStyle(theme.accent)
+                    .themeGlow(theme)
+            }
+        } else {
+            HStack(spacing: 10) {
+                Image(systemName: "music.note")
+                    .font(.system(size: 14))
+                    .foregroundStyle(theme.textTertiary)
+                Text("Nothing playing")
+                    .font(.system(size: 11))
+                    .foregroundStyle(theme.textTertiary)
+                Spacer()
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var artworkThumb: some View {
+        if let image = music.artwork {
+            Image(nsImage: image)
+                .resizable()
+                .scaledToFill()
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        } else {
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(theme.cardFill)
+                .overlay(
+                    Image(systemName: "music.note")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(theme.textTertiary)
+                )
+                .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(theme.cardStroke, lineWidth: 1))
         }
     }
 }

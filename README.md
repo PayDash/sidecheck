@@ -74,6 +74,9 @@ cp -R build/Sidecheck.app /Applications/   # to install
 - `BatteryAlerter.swift` — shared IOKit battery read + 30 s alerter timer + UN notifications
 - `PerfStore.swift` — 1 Hz self-sampling (task_info + proc_pid_rusage + proc_pidinfo) feeding Settings → Diagnostics; `proc_pid_rusage`'s buffer is a plain void* — pass the struct's address directly
 - `Widgets/StatsStore.swift` — 1 Hz CPU/memory/network + 5 s temperature + 15 s battery/disk/uptime sampling, 60-sample history
+- `Widgets/ProcessStore.swift` — per-process CPU% + phys-footprint while the panel is visible; **CPU = sum of per-THREAD times** (`PROC_PIDTHREADINFO`) because task-level counters (`proc_pid_rusage`, `PROC_PIDTASKINFO`) are billing-clamped for other processes on modern macOS — a 98% burner reads as 2% through them
+- `Apps/MusicStore.swift` — Spotify/Music now-playing via osascript (MediaRemote info is entitlement-blocked since macOS 15.4); 3 s poll on a background queue while visible, client-side position interpolation, per-track artwork cache
+- Home screen slot count 1 = one full-width widget slot; Monitor/Screen Time/Music have wide variants (`WidgetKind.wideWidget`)
 - Panel settings persist: `themeID`, `panelScale`, `panelAnimationStyle`, `panelAnimationSpeed`, `homeSlotCount`, `homeWidgetSlots`, `wallpaperSpecs`, `hotZoneWidth`, `hotZoneSpan`, `showDwellDelay`, `hideDwellDelay`, `lowBatteryAlertsEnabled`, `clipboardItems`, `screenTimeDays`, `screenTimeEnabled`, `screenTimeIdleMinutes`, `awakeKeepsDisplay`, `awakePID`
 
 ## Dev/test hooks
@@ -94,4 +97,4 @@ SIDECHECK_AUTOSHOW=1 SIDECHECK_OPENAPP=settings .build/release/Sidecheck
 - [ ] Global hotkey to toggle the panel
 
 ---
-*v0.7 — the Screen Time app (local app-usage tracking, Today/Week dashboard). Still built by an agent and its human.* ⏳
+*v0.8 — Top Processes (in Monitor, with kill), the Music app (Spotify/Music via AppleScript), and one-full-width-widget mode. Still built by an agent and its human.* 🎵

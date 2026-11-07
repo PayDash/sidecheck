@@ -45,9 +45,12 @@ struct HomeScreen: View {
     // MARK: widgets
 
     private var widgetRow: some View {
-        HStack(alignment: .top, spacing: 12) {
+        // A single slot spans the full width and renders the widget's wide
+        // variant; 2+ slots use the compact layouts.
+        let wide = home.effectiveSlots.count == 1
+        return HStack(alignment: .top, spacing: 12) {
             ForEach(home.effectiveSlots.indices, id: \.self) { index in
-                WidgetSlot(index: index, onOpen: onOpenApp)
+                WidgetSlot(index: index, onOpen: onOpenApp, wide: wide)
                     .frame(maxWidth: .infinity)
             }
         }

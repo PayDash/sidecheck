@@ -11,6 +11,8 @@ struct PanelView: View {
     @ObservedObject var wallpaper: WallpaperStore
     @ObservedObject var awake: AwakeStore
     @ObservedObject var screenTime: ScreenTimeStore
+    @ObservedObject var processes: ProcessStore
+    @ObservedObject var music: MusicStore
 
     private var theme: ThemeSpec { themes.current.spec }
 
@@ -60,6 +62,8 @@ struct PanelView: View {
         .environmentObject(controller.wallpaper)
         .environmentObject(controller.awake)
         .environmentObject(controller.screenTime)
+        .environmentObject(controller.processes)
+        .environmentObject(controller.music)
         .environmentObject(controller.perf)
         // entrance choreography: content springs in while the window appears
         .opacity(controller.isVisible ? 1 : 0)

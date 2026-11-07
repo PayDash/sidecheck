@@ -43,6 +43,7 @@ enum SystemInfo {
 
 struct MonitorAppView: View {
     @EnvironmentObject var stats: StatsStore
+    @EnvironmentObject var processes: ProcessStore
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -52,6 +53,7 @@ struct MonitorAppView: View {
                     MemoryCard(stats: stats)
                     BatteryCard(stats: stats)
                 }
+                ProcessesCard(processes: processes)
                 NetworkCard(stats: stats)
                 DiskCard(stats: stats)
                 GPUCard()

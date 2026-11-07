@@ -32,7 +32,7 @@ struct SettingsView: View {
                 sectionLabel("DIAGNOSTICS")
                 diagnosticsControls
 
-                Text("Sidecheck v0.7 — screen time, awake, wallpaper, clipboard")
+                Text("Sidecheck v0.8 — processes, music, screen time")
                     .font(.system(size: 10))
                     .foregroundStyle(theme.textTertiary)
                     .frame(maxWidth: .infinity, alignment: .center)
@@ -370,6 +370,12 @@ struct SettingsView: View {
                           ok: controller.clipboard.isPolling)
                 healthRow("Stats sampling",
                           controller.statsStore.isSampling ? "Active (visible)" : "Idle (hidden)",
+                          ok: true)
+                healthRow("Process sampling",
+                          controller.processes.isSampling ? "Active (visible)" : "Idle (hidden)",
+                          ok: true)
+                healthRow("Music",
+                          controller.music.isPolling ? "Polling (visible)" : "Idle (hidden)",
                           ok: true)
                 healthRow("Battery alerts",
                           controller.alerter.isEnabled ? "On — 20% / 10%" : "Off",
