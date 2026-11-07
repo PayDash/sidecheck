@@ -47,10 +47,19 @@ struct AwakeAppView: View {
     private var statusCard: some View {
         ThemedCard {
             HStack(spacing: 16) {
-                TimelineView(.periodic(from: .now, by: 1)) { context in
-                    statusRing(context.date)
+                // The ticking timer only matters while a session runs — the
+                // Off state is static, and a mounted TimelineView re-rendered
+                // the ring every second, re-arming the display-rate layout
+                // loop through the open/close animation (measured stutter).
+                if awake.isActive {
+                    TimelineView(.periodic(from: .now, by: 1)) { context in
+                        statusRing(context.date)
+                    }
+                    .frame(width: 74, height: 74)
+                } else {
+                    statusRing(Date())
+                        .frame(width: 74, height: 74)
                 }
-                .frame(width: 74, height: 74)
 
                 VStack(alignment: .leading, spacing: 5) {
                     Text(awake.isActive ? "Awake" : "Off")

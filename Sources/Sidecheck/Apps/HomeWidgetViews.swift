@@ -431,52 +431,66 @@ struct AwakeHomeWidget: View {
     @EnvironmentObject var awake: AwakeStore
 
     var body: some View {
-        TimelineView(.periodic(from: .now, by: 1)) { context in
-            HStack(spacing: 12) {
-                if awake.isActive {
-                    let remaining = awake.endDate.map { max(0, $0.timeIntervalSince(context.date)) }
-                    RingGauge(progress: ringProgress(remaining: remaining), lineWidth: 6) {
-                        Group {
-                            if let remaining {
-                                Text(Self.shortDuration(remaining))
-                                    .font(.system(size: 8.5, weight: .bold))
-                                    .monospacedDigit()
-                                    .foregroundStyle(theme.textPrimary)
-                            } else {
-                                Image(systemName: "infinity")
-                                    .font(.system(size: 11, weight: .bold))
-                                    .foregroundStyle(theme.textPrimary)
-                                    .themeGlow(theme)
-                            }
-                        }
-                    }
-                    .frame(width: 42, height: 42)
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Awake")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(theme.textPrimary)
-                        Text(endLabel)
-                            .font(.system(size: 9.5))
-                            .monospacedDigit()
-                            .foregroundStyle(theme.textTertiary)
-                    }
-                    Spacer()
-                } else {
-                    Image(systemName: "cup.and.saucer")
-                        .font(.system(size: 14))
-                        .foregroundStyle(theme.textTertiary)
-                    Text("Mac sleeps normally")
-                        .font(.system(size: 11))
-                        .foregroundStyle(theme.textTertiary)
-                    Spacer()
+        // Ticking timer only while a session runs — same reasoning as the
+        // Awake page: an idle-state TimelineView re-rendered every second and
+        // re-armed the display-rate layout loop through panel transitions.
+        Group {
+            if awake.isActive {
+                TimelineView(.periodic(from: .now, by: 1)) { context in
+                    awakeContent(context.date)
                 }
+            } else {
+                awakeContent(Date())
             }
         }
     }
 
-    private func ringProgress(remaining: TimeInterval?) -> Double {
+    private func awakeContent(_ contextDate: Date) -> some View {
+        HStack(spacing: 12) {
+            if awake.isActive {
+                let remaining = awake.endDate.map { max(0, $0.timeIntervalSince(contextDate)) }
+                RingGauge(progress: ringProgress(remaining: remaining, now: contextDate), lineWidth: 6) {
+                    Group {
+                        if let remaining {
+                            Text(Self.shortDuration(remaining))
+                                .font(.system(size: 8.5, weight: .bold))
+                                .monospacedDigit()
+                                .foregroundStyle(theme.textPrimary)
+                        } else {
+                            Image(systemName: "infinity")
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundStyle(theme.textPrimary)
+                                .themeGlow(theme)
+                        }
+                    }
+                }
+                .frame(width: 42, height: 42)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Awake")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(theme.textPrimary)
+                    Text(endLabel)
+                        .font(.system(size: 9.5))
+                        .monospacedDigit()
+                        .foregroundStyle(theme.textTertiary)
+                }
+                Spacer()
+            } else {
+                Image(systemName: "cup.and.saucer")
+                    .font(.system(size: 14))
+                    .foregroundStyle(theme.textTertiary)
+                Text("Mac sleeps normally")
+                    .font(.system(size: 11))
+                    .foregroundStyle(theme.textTertiary)
+                Spacer()
+            }
+        }
+    }
+
+    private func ringProgress(remaining: TimeInterval?, now: Date) -> Double {
         guard let remaining else { return 1 }
-        guard let total = awake.sessionDuration, total > 0 else { return 1 }
+        guard let endDate = awake.endDate, let total = awake.sessionDuration, total > 0 else { return 1 }
+        _ = now
         return remaining / total
     }
 

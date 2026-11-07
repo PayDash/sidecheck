@@ -40,6 +40,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
            let seconds = TimeInterval(raw) {
             panelController.awake.start(duration: seconds > 0 ? seconds : nil)
         }
+        // Dev/test hook: SIDECHECK_CYCLE=<seconds> toggles the panel every
+        // <seconds> after launch, for profiling open/close transitions.
+        if let raw = ProcessInfo.processInfo.environment["SIDECHECK_CYCLE"],
+           let seconds = TimeInterval(raw), seconds > 0 {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 4) { [weak self] in
+                guard let self else { return }
+                var show = false
+                Timer.scheduledTimer(withTimeInterval: seconds, repeats: true) { [weak self] _ in
+                    MainActor.assumeIsolated {
+                        guard let self else { return }
+                        show.toggle()
+                        fputs("[Sidecheck] cycle: \(show ? "show" : "hide")\n", stderr)
+                        if show {
+                            self.panelController.showPanel()
+                        } else {
+                            self.panelController.hidePanel(force: true)
+                        }
+                    }
+                }
+            }
+        }
         setupStatusItem()
 
         // Dev/test hooks: SIDECHECK_AUTOSHOW=1 pops (and pins) the panel
