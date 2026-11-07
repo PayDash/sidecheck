@@ -55,6 +55,7 @@ final class PanelController: ObservableObject {
     let music = MusicStore()
     let listening = ListeningStore()
     let statsFm = StatsFmProvider()
+    let performance = PerformanceStore()
     let perf = PerfStore()
     let edgeTracker = EdgeTracker()
 
@@ -156,7 +157,7 @@ final class PanelController: ObservableObject {
                     guard let self else { return }
                     self.applySystemAppearance()
                     self.homeStore.applyThemeLimit(self.themeStore.current.spec.maxHomeSlots)
-                    self.refreshFrame(animated: !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion)
+                    self.refreshFrame(animated: !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion && !self.performance.reduceEffects)
                 }
             }
             .store(in: &cancellables)
@@ -166,7 +167,7 @@ final class PanelController: ObservableObject {
     /// initialized and can be captured by the SwiftUI root view.
     func attachPanel() {
         let hostingView = NSHostingView(
-            rootView: PanelView(controller: self, stats: statsStore, themes: themeStore, home: homeStore, wallpaper: wallpaper, awake: awake, screenTime: screenTime, processes: processes, music: music, listening: listening, statsFm: statsFm)
+            rootView: PanelView(controller: self, stats: statsStore, themes: themeStore, home: homeStore, wallpaper: wallpaper, awake: awake, screenTime: screenTime, processes: processes, music: music, listening: listening, statsFm: statsFm, performance: performance)
         )
         // The window is the single sizing authority (edge-anchored, centered).
         // Without this, the hosting view pushes its SwiftUI ideal size into
@@ -225,6 +226,15 @@ final class PanelController: ObservableObject {
         processes.startSampling()
         music.startPolling() // idempotent — polling runs app-lifetime now
 
+        if performance.reduceEffects {
+            // Saver: no slide/zoom — the panel is simply there.
+            panel.setFrame(shown, display: false)
+            panel.alphaValue = 1
+            panel.orderFrontRegardless()
+            fputs("[Sidecheck] panel shown on \(target.localizedName)\n", stderr)
+            return
+        }
+
         switch animationStyle {
         case .slide:
             let hidden = shown.offsetBy(dx: shown.width + Config.edgeMargin + 8, dy: 0)
@@ -245,6 +255,16 @@ final class PanelController: ObservableObject {
         guard isVisible else { return }
         guard force || !isPinned else { return } // pinned panels stay put
         isVisible = false
+
+        if performance.reduceEffects {
+            // Saver: instant disappear, same bookkeeping as the animated paths.
+            panel.orderOut(nil)
+            isFullyHidden = true
+            statsStore.stopSampling()
+            processes.stopSampling()
+            fputs("[Sidecheck] panel hidden\n", stderr)
+            return
+        }
 
         switch animationStyle {
         case .slide:
@@ -284,7 +304,7 @@ final class PanelController: ObservableObject {
     func refreshFrame(animated: Bool) {
         guard isVisible, let screen = currentScreen else { return }
         let target = shownFrame(on: screen)
-        if animated, !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
+        if animated, !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion, !performance.reduceEffects {
             animateFrame(to: target, timing: .easeInEaseOut, duration: Config.themeMorphDuration)
         } else {
             panel.setFrame(target, display: true)

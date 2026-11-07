@@ -433,13 +433,15 @@ struct WallpaperHomeWidget: View {
 struct AwakeHomeWidget: View {
     @Environment(\.theme) private var theme
     @EnvironmentObject var awake: AwakeStore
+    @EnvironmentObject var performance: PerformanceStore
 
     var body: some View {
         // Ticking timer only while a session runs — same reasoning as the
         // Awake page: an idle-state TimelineView re-rendered every second and
         // re-armed the display-rate layout loop through panel transitions.
+        // Saver mode keeps it static too.
         Group {
-            if awake.isActive {
+            if awake.isActive && !performance.reduceEffects {
                 TimelineView(.periodic(from: .now, by: 1)) { context in
                     awakeContent(context.date)
                 }
@@ -908,6 +910,39 @@ struct MusicWideWidget: View {
                         .foregroundStyle(theme.textTertiary)
                 )
                 .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(theme.cardStroke, lineWidth: 1))
+        }
+    }
+}
+
+struct PerformanceHomeWidget: View {
+    @Environment(\.theme) private var theme
+    @EnvironmentObject var performance: PerformanceStore
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "bolt.fill")
+                .font(.system(size: 13, weight: .bold))
+                .foregroundStyle(.white)
+                .frame(width: 30, height: 30)
+                .background(
+                    Circle().fill(LinearGradient(
+                        colors: [performance.mode.tint.opacity(0.9), performance.mode.tint.opacity(0.55)],
+                        startPoint: .top, endPoint: .bottom
+                    ))
+                )
+                .themeGlow(theme)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(performance.mode.label)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(theme.textPrimary)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
+                Text(performance.mode.effectCaption)
+                    .font(.system(size: 9.5))
+                    .foregroundStyle(theme.textTertiary)
+                    .lineLimit(1)
+            }
+            Spacer()
         }
     }
 }

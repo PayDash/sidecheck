@@ -9,6 +9,7 @@ enum AppID: String, CaseIterable, Identifiable {
     case awake
     case screenTime
     case music
+    case performance
     case settings
 
     var id: String { rawValue }
@@ -27,6 +28,7 @@ enum WidgetKind: String, CaseIterable, Identifiable {
     case awake
     case screenTime
     case music
+    case performance
     case settings
 
     var id: String { rawValue }
@@ -39,6 +41,7 @@ enum WidgetKind: String, CaseIterable, Identifiable {
         case .awake: .awake
         case .screenTime: .screenTime
         case .music: .music
+        case .performance: .performance
         case .settings: .settings
         }
     }
@@ -55,6 +58,7 @@ enum WidgetKind: String, CaseIterable, Identifiable {
         case .awake: "Awake"
         case .screenTime: "Screen Time"
         case .music: "Music"
+        case .performance: "Performance"
         case .settings: "Settings"
         }
     }
@@ -71,6 +75,7 @@ enum WidgetKind: String, CaseIterable, Identifiable {
         case .awake: "cup.and.saucer.fill"
         case .screenTime: "hourglass"
         case .music: "music.note"
+        case .performance: "bolt.fill"
         case .settings: "gearshape.fill"
         }
     }
@@ -87,6 +92,7 @@ enum WidgetKind: String, CaseIterable, Identifiable {
         case .awake: .orange
         case .screenTime: .indigo
         case .music: .red
+        case .performance: .yellow
         case .settings: .gray
         }
     }
@@ -105,6 +111,7 @@ enum WidgetKind: String, CaseIterable, Identifiable {
         case .awake: AwakeHomeWidget()
         case .screenTime: ScreenTimeHomeWidget()
         case .music: MusicHomeWidget()
+        case .performance: PerformanceHomeWidget()
         case .settings: SettingsHomeWidget()
         }
     }
@@ -138,6 +145,7 @@ struct PanelApp: Identifiable {
         .awake: PanelApp(id: .awake, name: "Awake", symbol: "cup.and.saucer.fill", tint: .orange),
         .screenTime: PanelApp(id: .screenTime, name: "Screen Time", symbol: "hourglass", tint: .indigo),
         .music: PanelApp(id: .music, name: "Music", symbol: "music.note", tint: .red),
+        .performance: PanelApp(id: .performance, name: "Performance", symbol: "bolt.fill", tint: .yellow),
         .settings: PanelApp(id: .settings, name: "Settings", symbol: "gearshape.fill", tint: .gray),
     ]
 
@@ -155,6 +163,7 @@ extension AppID {
         case .awake: AwakeAppView()
         case .screenTime: ScreenTimeAppView()
         case .music: MusicAppView()
+        case .performance: PerformanceAppView()
         case .settings: SettingsAppView()
         }
     }

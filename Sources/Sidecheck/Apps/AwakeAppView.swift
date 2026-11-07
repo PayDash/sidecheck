@@ -6,6 +6,7 @@ struct AwakeAppView: View {
     @Environment(\.theme) private var theme
     @EnvironmentObject var awake: AwakeStore
     @EnvironmentObject var stats: StatsStore
+    @EnvironmentObject var performance: PerformanceStore
 
     @State private var customHours = 6.0
     @State private var customMinutes = 0.0
@@ -51,7 +52,8 @@ struct AwakeAppView: View {
                 // Off state is static, and a mounted TimelineView re-rendered
                 // the ring every second, re-arming the display-rate layout
                 // loop through the open/close animation (measured stutter).
-                if awake.isActive {
+                // Saver mode keeps it static too.
+                if awake.isActive && !performance.reduceEffects {
                     TimelineView(.periodic(from: .now, by: 1)) { context in
                         statusRing(context.date)
                     }

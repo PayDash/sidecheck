@@ -32,7 +32,7 @@ struct SettingsView: View {
                 sectionLabel("DIAGNOSTICS")
                 diagnosticsControls
 
-                Text("Sidecheck v0.9 — listening stats, music, processes")
+                Text("Sidecheck v0.10 — performance modes, listening stats")
                     .font(.system(size: 10))
                     .foregroundStyle(theme.textTertiary)
                     .frame(maxWidth: .infinity, alignment: .center)

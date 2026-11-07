@@ -15,6 +15,7 @@ struct PanelView: View {
     @ObservedObject var music: MusicStore
     @ObservedObject var listening: ListeningStore
     @ObservedObject var statsFm: StatsFmProvider
+    @ObservedObject var performance: PerformanceStore
 
     private var theme: ThemeSpec { themes.current.spec }
 
@@ -25,6 +26,11 @@ struct PanelView: View {
 
     @State private var page: Page = .home
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// Saver mode reuses the Reduce-Motion pathways: instant movement, no
+    /// micro-animations. (Background freezing is handled inside
+    /// PanelBackgroundView via `mode`.)
+    private var effectsOff: Bool { reduceMotion || performance.reduceEffects }
 
     // Entrance choreography follows the chosen animation preset.
     private var entranceSpring: Animation {
@@ -44,7 +50,7 @@ struct PanelView: View {
             themedPanel
                 .id(themes.current)
                 .transition(.opacity)
-                .animation(reduceMotion ? nil : .easeInOut(duration: Config.themeMorphDuration), value: themes.current)
+                .animation(effectsOff ? nil : .easeInOut(duration: Config.themeMorphDuration), value: themes.current)
         }
         // Fill the hosting view rather than pinning a fixed frame: the window
         // is the sizing authority, and on a theme switch PanelController
@@ -68,14 +74,15 @@ struct PanelView: View {
         .environmentObject(controller.music)
         .environmentObject(controller.listening)
         .environmentObject(controller.statsFm)
+        .environmentObject(controller.performance)
         .environmentObject(controller.perf)
         // entrance choreography: content springs in while the window appears
         .opacity(controller.isVisible ? 1 : 0)
-        .scaleEffect(controller.isVisible || reduceMotion ? 1 : entranceScale, anchor: .trailing)
-        .animation(reduceMotion ? .linear(duration: 0.12) : entranceSpring, value: controller.isVisible)
+        .scaleEffect(controller.isVisible || effectsOff ? 1 : entranceScale, anchor: .trailing)
+        .animation(effectsOff ? .linear(duration: 0.12) : entranceSpring, value: controller.isVisible)
         .onChange(of: controller.requestedApp) { _, newValue in
             guard let appID = newValue else { return }
-            withAnimation(.spring(response: 0.42, dampingFraction: 0.88)) {
+            withAnimation(effectsOff ? nil : .spring(response: 0.42, dampingFraction: 0.88)) {
                 page = .app(appID)
             }
             controller.requestedApp = nil
@@ -95,10 +102,10 @@ struct PanelView: View {
             // Fully-hidden pausing preserves the perf invariant from the
             // diagnostics era (≈0% CPU while hidden).
             let wallpaperSpec = wallpaper.spec(for: themes.current)
-            PanelBackgroundView(spec: wallpaperSpec, themeID: themes.current, paused: reduceMotion || controller.isFullyHidden)
+            PanelBackgroundView(spec: wallpaperSpec, themeID: themes.current, paused: reduceMotion || controller.isFullyHidden, mode: performance.mode)
                 .id(wallpaperSpec)
                 .transition(.opacity)
-                .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: wallpaperSpec)
+                .animation(effectsOff ? nil : .easeInOut(duration: 0.25), value: wallpaperSpec)
 
             VStack(spacing: 0) {
                 header
@@ -115,7 +122,7 @@ struct PanelView: View {
                             .transition(pageTransition(edge: .trailing))
                     }
                 }
-                .animation(.spring(response: 0.42, dampingFraction: 0.88), value: page)
+                .animation(effectsOff ? nil : .spring(response: 0.42, dampingFraction: 0.88), value: page)
             }
         }
         .foregroundStyle(spec.textPrimary)
@@ -125,7 +132,7 @@ struct PanelView: View {
     // MARK: Navigation
 
     private func openApp(_ id: AppID) {
-        withAnimation(.spring(response: 0.42, dampingFraction: 0.88)) {
+        withAnimation(effectsOff ? nil : .spring(response: 0.42, dampingFraction: 0.88)) {
             page = .app(id)
         }
     }
@@ -138,7 +145,7 @@ struct PanelView: View {
     }
 
     private func pageTransition(edge: Edge) -> AnyTransition {
-        let move = reduceMotion ? AnyTransition.opacity : AnyTransition.move(edge: edge).combined(with: .opacity)
+        let move = effectsOff ? AnyTransition.opacity : AnyTransition.move(edge: edge).combined(with: .opacity)
         return .asymmetric(insertion: move, removal: move)
     }
 

@@ -10,6 +10,7 @@ struct MusicAppView: View {
     @EnvironmentObject var controller: PanelController
     @EnvironmentObject var listening: ListeningStore
     @EnvironmentObject var statsFm: StatsFmProvider
+    @EnvironmentObject var performance: PerformanceStore
 
     private enum Tab: String, CaseIterable, Identifiable {
         case history = "History"
@@ -564,7 +565,7 @@ struct MusicAppView: View {
     /// bar renders once from the current position (no mounted timer).
     @ViewBuilder
     private func progressSection(_ track: TrackInfo) -> some View {
-        if music.isPlaying && controller.isVisible {
+        if music.isPlaying && controller.isVisible && !performance.reduceEffects {
             TimelineView(.periodic(from: .now, by: 1)) { _ in
                 progressBar(track)
             }
