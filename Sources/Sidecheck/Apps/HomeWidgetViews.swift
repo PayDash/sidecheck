@@ -868,15 +868,18 @@ struct MusicWideWidget: View {
                             .lineLimit(1)
                     }
                     Spacer()
-                    VStack(alignment: .trailing, spacing: 3) {
-                        Text(track.player)
-                            .font(.system(size: 9.5, weight: .semibold))
-                            .foregroundStyle(theme.textTertiary)
-                        Image(systemName: music.isPlaying ? "pause.circle.fill" : "play.circle.fill")
-                            .font(.system(size: 16))
-                            .foregroundStyle(theme.accent)
-                            .themeGlow(theme)
-                    }
+                    // Mini version of the app page's gradient transport button.
+                    Image(systemName: music.isPlaying ? "pause.fill" : "play.fill")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(width: 22, height: 22)
+                        .background(
+                            Circle().fill(LinearGradient(
+                                colors: [theme.accent, theme.accent2],
+                                startPoint: .top, endPoint: .bottom
+                            ))
+                        )
+                        .themeGlow(theme)
                 }
                 if track.duration > 0 {
                     MeterBar(progress: min(max(music.positionNow() / track.duration, 0), 1))
