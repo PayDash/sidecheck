@@ -36,6 +36,14 @@ final class MusicStore: ObservableObject {
     private var pollInFlight = false
     private var trackKey: String?
     private var artworkKey: String?
+    private var lastHiddenSpawn = Date.distantPast
+
+    /// Set from AppDelegate: whether the panel is visible. Drives the adaptive
+    /// cadence — 3 s visible, 15 s hidden.
+    var visibilityProvider: (() -> Bool)?
+    /// Fires on every poll with the current track; ListeningStore accumulates
+    /// listening history from it.
+    var onTrackObserved: ((TrackInfo, Bool, Date) -> Void)?
 
     var isPolling: Bool { timer != nil }
 
@@ -86,6 +94,15 @@ final class MusicStore: ObservableObject {
 
     private func poll() {
         guard !pollInFlight else { return }
+        // App-lifetime tracking with an adaptive cadence: 3 s while the panel
+        // is visible, 15 s hidden, and nothing at all when no player is
+        // running (an NSWorkspace check is free next to an osascript spawn).
+        let visible = visibilityProvider?() ?? true
+        if !visible {
+            guard Date().timeIntervalSince(lastHiddenSpawn) >= 15 else { return }
+            guard Self.playerIsRunning() else { return }
+            lastHiddenSpawn = Date()
+        }
         pollInFlight = true
         queue.async { [weak self] in
             let result = Self.runOSA(Self.queryScript)
@@ -94,6 +111,12 @@ final class MusicStore: ObservableObject {
                 self.pollInFlight = false
                 self.apply(result)
             }
+        }
+    }
+
+    private static func playerIsRunning() -> Bool {
+        NSWorkspace.shared.runningApplications.contains { app in
+            app.bundleIdentifier == "com.spotify.client" || app.bundleIdentifier == "com.apple.Music"
         }
     }
 
@@ -145,6 +168,9 @@ final class MusicStore: ObservableObject {
         }
         if isPlaying != newIsPlaying {
             isPlaying = newIsPlaying
+        }
+        if let current = track {
+            onTrackObserved?(current, isPlaying, Date())
         }
     }
 

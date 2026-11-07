@@ -53,6 +53,8 @@ final class PanelController: ObservableObject {
     let screenTime = ScreenTimeStore()
     let processes = ProcessStore()
     let music = MusicStore()
+    let listening = ListeningStore()
+    let statsFm = StatsFmProvider()
     let perf = PerfStore()
     let edgeTracker = EdgeTracker()
 
@@ -136,6 +138,11 @@ final class PanelController: ObservableObject {
         Config.showDwellDelay = showDwellDelay
         Config.hideDwellDelay = hideDwellDelay
 
+        // Every poll observation lands in the listening history.
+        music.onTrackObserved = { [weak listening] track, playing, at in
+            listening?.note(track: track, isPlaying: playing, at: at)
+        }
+
         // Theme switch while visible: on the next runloop tick (when the
         // published change has settled) morph the window to the new theme's
         // exact frame — animated, in sync with the SwiftUI content crossfade
@@ -159,7 +166,7 @@ final class PanelController: ObservableObject {
     /// initialized and can be captured by the SwiftUI root view.
     func attachPanel() {
         let hostingView = NSHostingView(
-            rootView: PanelView(controller: self, stats: statsStore, themes: themeStore, home: homeStore, wallpaper: wallpaper, awake: awake, screenTime: screenTime, processes: processes, music: music)
+            rootView: PanelView(controller: self, stats: statsStore, themes: themeStore, home: homeStore, wallpaper: wallpaper, awake: awake, screenTime: screenTime, processes: processes, music: music, listening: listening, statsFm: statsFm)
         )
         // The window is the single sizing authority (edge-anchored, centered).
         // Without this, the hosting view pushes its SwiftUI ideal size into
@@ -216,7 +223,7 @@ final class PanelController: ObservableObject {
         let shown = shownFrame(on: target)
         statsStore.startSampling()
         processes.startSampling()
-        music.startPolling()
+        music.startPolling() // idempotent — polling runs app-lifetime now
 
         switch animationStyle {
         case .slide:
@@ -248,7 +255,7 @@ final class PanelController: ObservableObject {
                 self.isFullyHidden = true
                 self.statsStore.stopSampling()
                 self.processes.stopSampling()
-                self.music.stopPolling()
+                // music polling continues — listening history is background
             }
         case .pop, .zoom:
             NSAnimationContext.runAnimationGroup({ context in
@@ -263,7 +270,7 @@ final class PanelController: ObservableObject {
                     self.isFullyHidden = true
                     self.statsStore.stopSampling()
                     self.processes.stopSampling()
-                    self.music.stopPolling()
+                    // music polling continues — listening history is background
                 }
             })
         }

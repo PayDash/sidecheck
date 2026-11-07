@@ -63,6 +63,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         panelController.perf.start()
         panelController.screenTime.startTracking()
+        // Listening history runs app-lifetime with an adaptive cadence
+        // (3 s visible / 15 s hidden, skipped when no player runs).
+        panelController.music.visibilityProvider = { [weak self] in
+            self?.panelController.isVisible ?? false
+        }
+        panelController.music.startPolling()
         // Dev/test hook: SIDECHECK_AWAKE=<seconds> starts an Awake session at
         // launch (0 = infinite).
         if let raw = ProcessInfo.processInfo.environment["SIDECHECK_AWAKE"],
@@ -125,9 +131,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     /// Stop-on-quit policy: an Awake session never outlives the app, and
-    /// tracked Screen Time is flushed before the process goes down.
+    /// tracked Screen Time / listening history are flushed before the
+    /// process goes down.
     func applicationWillTerminate(_ notification: Notification) {
         panelController.screenTime.flushNow()
+        panelController.listening.flushNow()
         panelController.awake.stop()
     }
 

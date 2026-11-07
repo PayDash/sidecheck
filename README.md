@@ -75,7 +75,9 @@ cp -R build/Sidecheck.app /Applications/   # to install
 - `PerfStore.swift` — 1 Hz self-sampling (task_info + proc_pid_rusage + proc_pidinfo) feeding Settings → Diagnostics; `proc_pid_rusage`'s buffer is a plain void* — pass the struct's address directly
 - `Widgets/StatsStore.swift` — 1 Hz CPU/memory/network + 5 s temperature + 15 s battery/disk/uptime sampling, 60-sample history
 - `Widgets/ProcessStore.swift` — per-process CPU% + phys-footprint while the panel is visible; **CPU = sum of per-THREAD times** (`PROC_PIDTHREADINFO`) because task-level counters (`proc_pid_rusage`, `PROC_PIDTASKINFO`) are billing-clamped for other processes on modern macOS — a 98% burner reads as 2% through them
-- `Apps/MusicStore.swift` — Spotify/Music now-playing via osascript (MediaRemote info is entitlement-blocked since macOS 15.4); 3 s poll on a background queue while visible, client-side position interpolation, per-track artwork cache
+- `Apps/MusicStore.swift` — Spotify/Music now-playing via osascript (MediaRemote info is entitlement-blocked since macOS 15.4); app-lifetime adaptive poll (3 s visible / 15 s hidden / skipped when no player runs), client-side position interpolation, per-track artwork cache
+- `Apps/ListeningStats.swift` + `ListeningStore.swift` — provider protocol for listening stats; local history accumulates from every poll (background, persisted `"listeningHistory"`, flush throttled 30 s + on track change because SIGTERM skips `applicationWillTerminate`), favorites, "This Mac" provider
+- `Apps/StatsFmProvider.swift` — optional stats.fm backend (username + optional personal token, nothing hardcoded); public `streams/recent` + `top/*` endpoints, lowercase range values, TTL cache, ISO-fractional date decoding
 - Home screen slot count 1 = one full-width widget slot; Monitor/Screen Time/Music have wide variants (`WidgetKind.wideWidget`)
 - Panel settings persist: `themeID`, `panelScale`, `panelAnimationStyle`, `panelAnimationSpeed`, `homeSlotCount`, `homeWidgetSlots`, `wallpaperSpecs`, `hotZoneWidth`, `hotZoneSpan`, `showDwellDelay`, `hideDwellDelay`, `lowBatteryAlertsEnabled`, `clipboardItems`, `screenTimeDays`, `screenTimeEnabled`, `screenTimeIdleMinutes`, `awakeKeepsDisplay`, `awakePID`
 
@@ -97,4 +99,4 @@ SIDECHECK_AUTOSHOW=1 SIDECHECK_OPENAPP=settings .build/release/Sidecheck
 - [ ] Global hotkey to toggle the panel
 
 ---
-*v0.8 — Top Processes (in Monitor, with kill), the Music app (Spotify/Music via AppleScript), and one-full-width-widget mode. Still built by an agent and its human.* 🎵
+*v0.9 — listening stats: History / Top artists & tracks / Stats / Favorites in the Music app, powered by local background history + optional stats.fm. Still built by an agent and its human.* 🎧
