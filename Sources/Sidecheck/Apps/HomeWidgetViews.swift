@@ -20,7 +20,7 @@ struct AppIconTile: View {
                 .frame(width: size, height: size)
                 .overlay {
                     Image(systemName: app.symbol)
-                        .font(.system(size: size * 0.4, weight: .semibold))
+                        .font(.system(size: size * 0.42, weight: .semibold))
                         .foregroundStyle(.white)
                 }
                 .overlay(alignment: .top) {

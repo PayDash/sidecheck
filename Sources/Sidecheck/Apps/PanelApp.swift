@@ -61,7 +61,7 @@ enum WidgetKind: String, CaseIterable, Identifiable {
 
     var symbol: String {
         switch self {
-        case .monitor: "gauge.with.dots.needle.bottom.50percent"
+        case .monitor: "waveform.path.ecg"
         case .battery: "battery.75percent"
         case .network: "wifi"
         case .disk: "internaldrive"
@@ -132,7 +132,7 @@ struct PanelApp: Identifiable {
     let tint: Color
 
     static let registry: [AppID: PanelApp] = [
-        .monitor: PanelApp(id: .monitor, name: "Monitor", symbol: "gauge.with.dots.needle.bottom.50percent", tint: .blue),
+        .monitor: PanelApp(id: .monitor, name: "Monitor", symbol: "waveform.path.ecg", tint: .blue),
         .clipboard: PanelApp(id: .clipboard, name: "Clipboard", symbol: "doc.on.clipboard", tint: .pink),
         .wallpaper: PanelApp(id: .wallpaper, name: "Wallpaper", symbol: "paintpalette.fill", tint: .teal),
         .awake: PanelApp(id: .awake, name: "Awake", symbol: "cup.and.saucer.fill", tint: .orange),
