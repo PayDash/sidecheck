@@ -402,9 +402,7 @@ struct WallpaperHomeWidget: View {
 
     private var kindName: String {
         switch spec.kind {
-        case .theme: "Current"
         case .bubbles: "Bubbles"
-        case .blobs: "Blobs"
         case .crt: "CRT"
         case .solid: "Solid color"
         case .gradient: GradientPresets.byID(spec.gradientID)?.name ?? "Gradient"
@@ -416,12 +414,8 @@ struct WallpaperHomeWidget: View {
     @ViewBuilder
     private var swatchFill: some View {
         switch spec.kind {
-        case .theme:
-            LinearGradient(colors: [theme.accent.opacity(0.8), theme.accent2.opacity(0.5)], startPoint: .topLeading, endPoint: .bottomTrailing)
         case .bubbles:
             LinearGradient(colors: [Color.white.opacity(0.25), Color.blue.opacity(0.35)], startPoint: .top, endPoint: .bottom)
-        case .blobs:
-            LinearGradient(colors: [Color(red: 0.93, green: 0.95, blue: 0.98), Color(red: 0.75, green: 0.85, blue: 1.0)], startPoint: .top, endPoint: .bottom)
         case .crt:
             LinearGradient(colors: [Color.black, Color(red: 0.05, green: 0.3, blue: 0.12)], startPoint: .top, endPoint: .bottom)
         case .solid:

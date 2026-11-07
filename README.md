@@ -65,7 +65,7 @@ cp -R build/Sidecheck.app /Applications/   # to install
 - `Apps/ScreenTimeStore.swift` — foreground-app usage tracker (NSWorkspace activations + 1 s heartbeat, CGEventSource idle pause, lock/sleep/fast-user-switch suspensions), per-day JSON in UserDefaults, 90-day retention; zero permissions
 - `Apps/ScreenTimeAppView.swift` — Today/Week dashboard (Canvas bar chart, hour/day drill-down, Most Used with LaunchServices icons)
 - `Apps/ClipboardStore.swift` — pasteboard change-count polling → 50-item history, persisted
-- `Apps/WallpaperStore.swift` — per-theme `BackgroundSpec` persistence (`wallpaperSpecs`), image cache, looping AVPlayers
+- `Apps/WallpaperStore.swift` — per-theme `BackgroundSpec` persistence (`wallpaperSpecs`), image cache, looping AVPlayers. Kinds: bubbles/crt/solid/gradient/picture/video (theme-native + blobs removed v0.9 — stale persisted kinds decode as bubbles; per-theme defaults via `defaultSpec(for:)`). The custom color picker orders `NSColorPanel` front directly with a target/action bridge + `NSApp.activate` — a well click in the non-activating panel never opens it otherwise; while open, the edge tracker vetoes auto-hide
 - `Backgrounds.swift` — spec-driven `PanelBackgroundView` (theme / bubbles / blobs / CRT / solid / gradient / picture / video), glass bubbles, gradient presets
 - `Apps/AppViews.swift` — full app pages + IORegistry GPU name helper
 - `ThemeStore.swift` — `ThemeSpec` design tokens incl. `frameSize`, `homeStyle`, `iconCornerRadiusRatio`

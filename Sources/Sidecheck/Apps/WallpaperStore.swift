@@ -26,7 +26,9 @@ final class WallpaperStore: ObservableObject {
         }
         // Decode keyed by raw String and map manually: a theme removed from
         // the app (e.g. the iPad) must not fail the whole dictionary — its
-        // entry is simply dropped.
+        // entry is simply dropped. Persist the mapping explicitly: didSet
+        // doesn't fire for assignments in init, and stale kinds (theme/blobs,
+        // removed in v0.9) should be rewritten as their decoded values.
         if let data,
            let saved = try? JSONDecoder().decode([String: BackgroundSpec].self, from: data) {
             var mapped: [ThemeID: BackgroundSpec] = [:]
@@ -36,6 +38,7 @@ final class WallpaperStore: ObservableObject {
                 }
             }
             specs = mapped
+            persist()
         } else {
             specs = [:]
         }
@@ -50,7 +53,13 @@ final class WallpaperStore: ObservableObject {
     }
 
     func spec(for theme: ThemeID) -> BackgroundSpec {
-        specs[theme] ?? .themeDefault
+        specs[theme] ?? Self.defaultSpec(for: theme)
+    }
+
+    /// Out-of-box look per theme — preserves what the removed theme-native
+    /// kind used to render (liquidGlass bubbles / cyberdeck CRT).
+    static func defaultSpec(for theme: ThemeID) -> BackgroundSpec {
+        BackgroundSpec(kind: theme == .cyberdeck ? .crt : .bubbles)
     }
 
     func set(_ spec: BackgroundSpec, for theme: ThemeID) {
@@ -61,7 +70,7 @@ final class WallpaperStore: ObservableObject {
     }
 
     func reset(for theme: ThemeID) {
-        set(.themeDefault, for: theme)
+        set(Self.defaultSpec(for: theme), for: theme)
     }
 
     private func persist() {

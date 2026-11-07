@@ -2,13 +2,12 @@ import SwiftUI
 
 // MARK: - Background specs (owned by WallpaperStore, rendered here)
 
-/// What kind of background a panel theme shows. `.theme` = the theme's own
-/// animated look; the other kinds override it (a wallpaper can use any theme's
-/// animated style, a solid, a gradient, a picture or a video on any theme).
+/// What kind of background a panel theme shows: an animated style (bubbles or
+/// CRT), a solid, a gradient, a picture or a video — usable on any theme.
+/// (`theme`/`blobs` were removed in v0.9 — their looks live on as `.bubbles`
+/// and `.crt`; stale persisted values decode as `.bubbles`.)
 enum BackgroundKind: String, Codable, CaseIterable {
-    case theme
     case bubbles
-    case blobs
     case crt
     case solid
     case gradient
@@ -37,7 +36,7 @@ struct RGBA: Codable, Equatable, Hashable {
     }
 }
 struct BackgroundSpec: Codable, Equatable, Hashable {
-    var kind: BackgroundKind = .theme
+    var kind: BackgroundKind = .bubbles
     var color: RGBA?
     var gradientID: String?
     var gradientAngle: Double = 0
@@ -45,11 +44,15 @@ struct BackgroundSpec: Codable, Equatable, Hashable {
     var crop = CropSpec()
     var isMuted = true
 
-    static let themeDefault = BackgroundSpec()
+    init(kind: BackgroundKind = .bubbles) {
+        self.kind = kind
+    }
 
     // Hand-rolled decode with decodeIfPresent: synthesized Codable demands
     // every non-optional key, so persisted specs would break whenever a new
-    // field ships. Encodable stays synthesized.
+    // field ships. Encodable stays synthesized. The kind decodes through the
+    // raw String so kinds removed later (theme/blobs in v0.9) fall back to
+    // .bubbles instead of failing the whole persisted dictionary.
     private enum CodingKeys: String, CodingKey {
         case kind, color, gradientID, gradientAngle, filePath, crop, isMuted
     }
@@ -58,7 +61,8 @@ struct BackgroundSpec: Codable, Equatable, Hashable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        kind = try container.decodeIfPresent(BackgroundKind.self, forKey: .kind) ?? .theme
+        let rawKind = try container.decodeIfPresent(String.self, forKey: .kind)
+        kind = rawKind.flatMap(BackgroundKind.init(rawValue:)) ?? .bubbles
         color = try container.decodeIfPresent(RGBA.self, forKey: .color)
         gradientID = try container.decodeIfPresent(String.self, forKey: .gradientID)
         gradientAngle = try container.decodeIfPresent(Double.self, forKey: .gradientAngle) ?? 0
@@ -99,12 +103,8 @@ struct PanelBackgroundView: View {
 
     var body: some View {
         switch spec.kind {
-        case .theme:
-            ThemeNativeBackground(id: themeID, paused: paused)
         case .bubbles:
             GlassBubblesBackground(paused: paused)
-        case .blobs:
-            IPadBackground(paused: paused)
         case .crt:
             CyberdeckBackground(paused: paused)
         case .solid:
@@ -118,13 +118,13 @@ struct PanelBackgroundView: View {
             if WallpaperStore.cachedImage(spec.filePath) != nil {
                 WallpaperMediaView(path: spec.filePath, crop: spec.crop, paused: paused)
             } else {
-                ThemeNativeBackground(id: themeID, paused: paused)
+                GlassBubblesBackground(paused: paused)
             }
         case .video:
             if WallpaperStore.mediaExists(spec.filePath) {
                 WallpaperMediaView(path: spec.filePath, crop: spec.crop, paused: paused, video: true, muted: spec.isMuted)
             } else {
-                ThemeNativeBackground(id: themeID, paused: paused)
+                GlassBubblesBackground(paused: paused)
             }
         }
     }
@@ -138,19 +138,6 @@ struct PanelBackgroundView: View {
             endPoint: UnitPoint(x: 0.5 + cos(angle) / 2, y: 0.5 + sin(angle) / 2)
         )
         .ignoresSafeArea()
-    }
-}
-
-/// The per-theme default animated background (spec kind `.theme`).
-struct ThemeNativeBackground: View {
-    let id: ThemeID
-    var paused: Bool = false
-
-    var body: some View {
-        switch id {
-        case .liquidGlass: GlassBubblesBackground(paused: paused)
-        case .cyberdeck: CyberdeckBackground(paused: paused)
-        }
     }
 }
 
@@ -227,45 +214,6 @@ struct GlassBubblesBackground: View {
             Path(ellipseIn: sheen),
             with: .color(.white.opacity(0.15 * edge))
         )
-    }
-}
-
-// MARK: - iPad blobs
-
-/// Self-contained light wallpaper + slow pastel blobs (iPadOS light mode).
-struct IPadBackground: View {
-    let paused: Bool
-
-    var body: some View {
-        ZStack {
-            LinearGradient(
-                colors: [
-                    Color(red: 0.93, green: 0.95, blue: 0.98),
-                    Color(red: 0.88, green: 0.91, blue: 0.96),
-                    Color(red: 0.90, green: 0.93, blue: 0.97),
-                ],
-                startPoint: .topLeading, endPoint: .bottomTrailing
-            )
-            TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: paused)) { context in
-                let t = context.date.timeIntervalSinceReferenceDate
-                ZStack {
-                    blob(Color(red: 0.55, green: 0.75, blue: 1.0).opacity(0.4), radius: 170,
-                         offset: CGPoint(x: sin(t * 0.13) * 100, y: cos(t * 0.11) * 80 - 160))
-                    blob(Color(red: 1.0, green: 0.75, blue: 0.7).opacity(0.3), radius: 150,
-                         offset: CGPoint(x: cos(t * 0.17 + 1) * 90, y: sin(t * 0.14 + 2) * 100 + 150))
-                    blob(Color(red: 0.65, green: 0.95, blue: 0.85).opacity(0.3), radius: 140,
-                         offset: CGPoint(x: sin(t * 0.09 + 3) * 110, y: cos(t * 0.2 + 0.5) * 60))
-                }
-            }
-        }
-    }
-
-    private func blob(_ color: Color, radius: CGFloat, offset: CGPoint) -> some View {
-        Circle()
-            .fill(RadialGradient(colors: [color, .clear], center: .center, startRadius: 0, endRadius: radius))
-            .frame(width: radius * 2, height: radius * 2)
-            .offset(x: offset.x, y: offset.y)
-            .blur(radius: 40)
     }
 }
 

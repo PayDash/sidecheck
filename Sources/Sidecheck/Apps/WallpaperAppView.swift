@@ -80,9 +80,7 @@ struct WallpaperAppView: View {
         ThemedCard {
             VStack(alignment: .leading, spacing: 10) {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 76), spacing: 8)], spacing: 8) {
-                    animatedTile(.theme, name: "Current", colors: [theme.accent.opacity(0.7), theme.accent2.opacity(0.45)])
                     animatedTile(.bubbles, name: "Bubbles", colors: [Color.white.opacity(0.35), Color.blue.opacity(0.4)])
-                    animatedTile(.blobs, name: "Blobs", colors: [Color(red: 0.93, green: 0.95, blue: 0.98), Color(red: 0.72, green: 0.82, blue: 1.0)])
                     animatedTile(.crt, name: "CRT", colors: [Color.black, Color(red: 0.05, green: 0.32, blue: 0.13)])
                 }
                 Text("All animations run at 30 fps and pause while the panel is hidden.")
@@ -152,26 +150,14 @@ struct WallpaperAppView: View {
                         solidSwatch(color)
                     }
                 }
-                HStack {
-                    ColorPicker("Custom color", selection: Binding(
-                        get: { spec.color?.color ?? Self.solidPresets[0] },
-                        set: { newValue in
-                            update {
-                                $0.kind = .solid
-                                $0.color = RGBA(newValue)
-                            }
-                        }
-                    ), supportsOpacity: false)
-                    .font(.system(size: 12))
-                    .foregroundStyle(theme.textPrimary)
-                    Spacer()
-                }
+                SolidColorPickerRow()
             }
         }
     }
 
     private func solidSwatch(_ color: Color) -> some View {
-        let isSelected = spec.kind == .solid && spec.color?.color == color
+        // RGBA equality — semantic Colors never equal their converted copies.
+        let isSelected = spec.kind == .solid && spec.color == RGBA(color)
         return Button {
             update {
                 $0.kind = .solid
@@ -386,7 +372,7 @@ struct WallpaperAppView: View {
             Button {
                 wallpaper.reset(for: themes.current)
             } label: {
-                Label("Reset to theme", systemImage: "arrow.uturn.backward")
+                Label("Reset", systemImage: "arrow.uturn.backward")
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(theme.textSecondary)
                     .padding(.horizontal, 10)
@@ -395,8 +381,8 @@ struct WallpaperAppView: View {
                     .overlay(Capsule().strokeBorder(theme.cardStroke, lineWidth: 1))
             }
             .buttonStyle(.plain)
-            .disabled(spec == .themeDefault)
-            .opacity(spec == .themeDefault ? 0.4 : 1)
+            .disabled(spec == WallpaperStore.defaultSpec(for: themes.current))
+            .opacity(spec == WallpaperStore.defaultSpec(for: themes.current) ? 0.4 : 1)
 
             Button {
                 wallpaper.applyToAllThemes(spec)
@@ -410,8 +396,8 @@ struct WallpaperAppView: View {
                     .overlay(Capsule().strokeBorder(theme.accent.opacity(0.4), lineWidth: 1))
             }
             .buttonStyle(.plain)
-            .disabled(spec == .themeDefault)
-            .opacity(spec == .themeDefault ? 0.4 : 1)
+            .disabled(spec == WallpaperStore.defaultSpec(for: themes.current))
+            .opacity(spec == WallpaperStore.defaultSpec(for: themes.current) ? 0.4 : 1)
             Spacer()
         }
     }
@@ -559,5 +545,67 @@ struct CropEditorView: View {
         next.offsetX = min(max(next.offsetX, -maxX), maxX)
         next.offsetY = min(max(next.offsetY, -maxY), maxY)
         return next
+    }
+}
+
+/// Receives NSColorPanel's action and forwards picks to the spec writer.
+@MainActor
+final class ColorPanelBridge: NSObject {
+    static let shared = ColorPanelBridge()
+    var onChange: ((NSColor) -> Void)?
+
+    @objc func colorChanged(_ sender: NSColorPanel) {
+        onChange?(sender.color)
+    }
+}
+
+/// The custom color picker. A SwiftUI `ColorPicker` never opens the standard
+/// panel from this non-activating panel (the well's click doesn't activate
+/// it), so the well is a Button that orders the shared NSColorPanel front
+/// directly with a target/action bridge — `isContinuous` streams picks live
+/// into the spec. While the panel is open the edge tracker vetoes auto-hide
+/// (AppDelegate).
+private struct SolidColorPickerRow: View {
+    @Environment(\.theme) private var theme
+    @EnvironmentObject var wallpaper: WallpaperStore
+    @EnvironmentObject var themes: ThemeStore
+
+    var body: some View {
+        let current = wallpaper.spec(for: themes.current).color?.color
+            ?? Color(red: 0.08, green: 0.09, blue: 0.12)
+        return HStack {
+            Text("Custom color")
+                .font(.system(size: 12))
+                .foregroundStyle(theme.textPrimary)
+            Button {
+                let panel = NSColorPanel.shared
+                panel.setTarget(ColorPanelBridge.shared)
+                panel.setAction(#selector(ColorPanelBridge.colorChanged(_:)))
+                panel.isContinuous = true
+                ColorPanelBridge.shared.onChange = { nsColor in
+                    var next = wallpaper.spec(for: themes.current)
+                    next.kind = .solid
+                    next.color = RGBA(Color(nsColor: nsColor))
+                    wallpaper.set(next, for: themes.current)
+                }
+                // The app is LSUIElement and never active — an orderFront from
+                // an inactive app reports visible=true but the window server
+                // never composites the panel (found live: no CGWindow).
+                // Activating first makes it actually appear.
+                NSApp.activate(ignoringOtherApps: true)
+                panel.makeKeyAndOrderFront(nil)
+                fputs("[Sidecheck] colorpanel: orderFront → visible=\(panel.isVisible) frame=\(panel.frame)\n", stderr)
+            } label: {
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(current)
+                    .frame(width: 56, height: 22)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .strokeBorder(theme.cardStroke, lineWidth: 1.5)
+                    )
+            }
+            .buttonStyle(.plain)
+            Spacer()
+        }
     }
 }

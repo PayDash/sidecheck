@@ -51,9 +51,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         edgeTracker.keepAliveRectProvider = { [weak self] in
             self?.panelController.panelFrameIfVisible
         }
-        // A pinned panel (or one with keyboard focus) vetoes auto-hide.
+        // A pinned panel (or one with keyboard focus) vetoes auto-hide — so
+        // does an open color panel: the NSColorWell's picker floats off the
+        // panel, and hiding Sidecheck mid-pick would unmount the page.
         edgeTracker.canHideProvider = { [weak self] in
             guard let self else { return true }
+            if NSColorPanel.shared.isVisible { return false }
             return !self.panelController.isPinned && !self.panelController.panelIsKeyWindow
         }
         edgeTracker.start()
