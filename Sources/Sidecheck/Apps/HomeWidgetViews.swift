@@ -109,16 +109,20 @@ struct WidgetSlot: View {
     private func slotChrome(kind: WidgetKind?) -> some View {
         ThemedCard {
             VStack(alignment: .leading, spacing: 10) {
-                HStack(spacing: 8) {
-                    WidgetBadge(kind: kind ?? .settings)
-                    Text(kind?.name ?? "Widget")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(theme.textSecondary)
-                    Spacer()
-                    if home.isEditMode {
-                        HStack(spacing: 2) {
-                            moveButton(direction: -1, enabled: index > 0)
-                            moveButton(direction: 1, enabled: index < home.effectiveSlots.count - 1)
+                // Music's widget is a self-contained now-playing bar — no
+                // badge row (edit mode keeps it for slot identification).
+                if home.isEditMode || (kind?.showsSlotHeader ?? true) {
+                    HStack(spacing: 8) {
+                        WidgetBadge(kind: kind ?? .settings)
+                        Text(kind?.name ?? "Widget")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(theme.textSecondary)
+                        Spacer()
+                        if home.isEditMode {
+                            HStack(spacing: 2) {
+                                moveButton(direction: -1, enabled: index > 0)
+                                moveButton(direction: 1, enabled: index < home.effectiveSlots.count - 1)
+                            }
                         }
                     }
                 }
@@ -849,27 +853,34 @@ struct MusicWideWidget: View {
 
     var body: some View {
         if let track = music.track {
-            HStack(spacing: 12) {
-                artworkThumb
-                    .frame(width: 38, height: 38)
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(track.title)
-                        .font(.system(size: 11.5, weight: .semibold))
-                        .foregroundStyle(theme.textPrimary)
-                        .lineLimit(1)
-                    Text(track.artist)
-                        .font(.system(size: 9.5))
-                        .foregroundStyle(theme.textTertiary)
-                        .lineLimit(1)
+            VStack(spacing: 9) {
+                HStack(spacing: 12) {
+                    artworkThumb
+                        .frame(width: 46, height: 46)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(track.title)
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(theme.textPrimary)
+                            .lineLimit(1)
+                        Text(track.artist)
+                            .font(.system(size: 10.5))
+                            .foregroundStyle(theme.textTertiary)
+                            .lineLimit(1)
+                    }
+                    Spacer()
+                    VStack(alignment: .trailing, spacing: 3) {
+                        Text(track.player)
+                            .font(.system(size: 9.5, weight: .semibold))
+                            .foregroundStyle(theme.textTertiary)
+                        Image(systemName: music.isPlaying ? "pause.circle.fill" : "play.circle.fill")
+                            .font(.system(size: 16))
+                            .foregroundStyle(theme.accent)
+                            .themeGlow(theme)
+                    }
                 }
-                Spacer()
-                Text(track.player)
-                    .font(.system(size: 9))
-                    .foregroundStyle(theme.textTertiary)
-                Image(systemName: music.isPlaying ? "pause.circle.fill" : "play.circle.fill")
-                    .font(.system(size: 16))
-                    .foregroundStyle(theme.accent)
-                    .themeGlow(theme)
+                if track.duration > 0 {
+                    MeterBar(progress: min(max(music.positionNow() / track.duration, 0), 1))
+                }
             }
         } else {
             HStack(spacing: 10) {

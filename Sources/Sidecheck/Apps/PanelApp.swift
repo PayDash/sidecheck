@@ -109,6 +109,10 @@ enum WidgetKind: String, CaseIterable, Identifiable {
         }
     }
 
+    /// Whether the slot chrome draws the badge + name header row. Music's
+    /// widget is a self-contained now-playing bar, so it opts out.
+    var showsSlotHeader: Bool { self != .music }
+
     /// The layout used when the home screen shows a single full-width slot.
     @ViewBuilder
     var wideWidget: some View {
