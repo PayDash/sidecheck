@@ -1,8 +1,8 @@
 # Sidecheck
 
-A tiny personal macOS menu-bar app: hover the pointer at the **middle-right edge** of any screen and a panel pops out — a full **app platform** with an iPadOS-style home screen, tappable apps, swappable widgets, and three themes.
+A tiny personal macOS menu-bar app: hover the pointer at the **middle-right edge** of any screen and a panel pops out — a full **app platform** with a tappable home screen, swappable widgets, and two themes.
 
-![ipad](docs/screenshots/theme-ipad.png)
+![liquid glass](docs/screenshots/theme-liquidglass.png)
 
 ## The app platform
 
@@ -43,7 +43,7 @@ Three themes on one theme-agnostic base — each theme picks its own **frame siz
 
 - Hover the right-edge hot zone (middle 40% of screen height) → panel opens after a short dwell; move away → hides after a grace period. Works on every display.
 - **Pin** keeps the panel open while you interact; keyboard focus in the panel (e.g. clipboard search) also holds it open.
-- **Switching themes while the panel is open is a seamless morph**: the window animates to the new theme's exact frame (flush right, vertically centered) over the same 0.32 s curve the content crossfades — the panel visibly grows/shrinks between phone-card and iPad shapes with nothing re-anchoring it (`NSHostingView.sizingOptions = []` keeps the window the single sizing authority).
+- **Switching themes while the panel is open is a seamless morph**: the window animates to the new theme's exact frame (flush right, vertically centered) over the same 0.32 s curve the content crossfades — the panel visibly grows/shrinks between theme frame sizes with nothing re-anchoring it (`NSHostingView.sizingOptions = []` keeps the window the single sizing authority).
 - Menu bar: Show panel · Enabled · Theme submenu · Launch at Login · Quit.
 - Never steals keyboard focus; floats over fullscreen apps; no permissions needed (`NSEvent` monitors only). Notifications appear only if you enable low-battery alerts.
 
@@ -66,7 +66,7 @@ cp -R build/Sidecheck.app /Applications/   # to install
 - `Apps/ScreenTimeAppView.swift` — Today/Week dashboard (Canvas bar chart, hour/day drill-down, Most Used with LaunchServices icons)
 - `Apps/ClipboardStore.swift` — pasteboard change-count polling → 50-item history, persisted
 - `Apps/WallpaperStore.swift` — per-theme `BackgroundSpec` persistence (`wallpaperSpecs`), image cache, looping AVPlayers. Kinds: bubbles/crt/solid/gradient/picture/video (theme-native + blobs removed v0.9 — stale persisted kinds decode as bubbles; per-theme defaults via `defaultSpec(for:)`). The custom color picker orders `NSColorPanel` front directly with a target/action bridge + `NSApp.activate` — a well click in the non-activating panel never opens it otherwise; while open, the edge tracker vetoes auto-hide
-- `Backgrounds.swift` — spec-driven `PanelBackgroundView` (theme / bubbles / blobs / CRT / solid / gradient / picture / video), glass bubbles, gradient presets
+- `Backgrounds.swift` — spec-driven `PanelBackgroundView` (bubbles / CRT / solid / gradient / picture / video), glass bubbles, gradient presets
 - `Apps/AppViews.swift` — full app pages + IORegistry GPU name helper
 - `ThemeStore.swift` — `ThemeSpec` design tokens incl. `frameSize`, `homeStyle`, `iconCornerRadiusRatio`
 - `PanelController.swift` — NSPanel, size scale, animation presets, live re-frame, theme-switch morph, edge-zone tuning
@@ -90,7 +90,7 @@ SIDECHECK_AUTOSHOW=1 SIDECHECK_OPENAPP=settings .build/release/Sidecheck
 
 `SIDECHECK_AUTOSHOW=1` pops (and pins) the panel 2 s after launch; `SIDECHECK_OPENAPP=<appId>` navigates to an app; `SIDECHECK_SETTHEME=<themeId>` live-switches the theme while open (for morph testing); `SIDECHECK_PERFLOG=1` prints one perf line to stderr every 5 s (CPU %, footprint, idle wakeups, syscalls, threads); `SIDECHECK_AWAKE=<seconds>` starts an Awake session at launch (0 = infinite); `SIDECHECK_SCREENTIME_SEED=<days>` fills Screen Time with deterministic synthetic history for chart verification; `SIDECHECK_SCREENTIME_LOG=1` logs tracker switches/flushes/idle pauses to stderr. Show/hide events log to stderr.
 
-**Perf invariants** (visible in Settings → Diagnostics): while **hidden** the app should sit at ≈0% CPU and single-digit wakeups/s — animated backgrounds, including video wallpapers, pause once the hide animation finishes (they keep playing *through* the slide so nothing freezes mid-motion); all animations run at 30 fps. Stats sample at 0.5 Hz — at 1 Hz every widget text change re-armed a display-rate AppKit layout pass (~20% CPU). Solid colors and gradients are nearly free; bubbles/blobs/CRT ~8%; a playing video wallpaper ~20% by design.
+**Perf invariants** (visible in Settings → Diagnostics): while **hidden** the app should sit at ≈0% CPU and single-digit wakeups/s — animated backgrounds, including video wallpapers, pause once the hide animation finishes (they keep playing *through* the slide so nothing freezes mid-motion); all animations run at 30 fps. Stats sample at 0.5 Hz — at 1 Hz every widget text change re-armed a display-rate AppKit layout pass (~20% CPU). Solid colors and gradients are nearly free; bubbles/CRT ~8%; a playing video wallpaper ~20% by design.
 
 ## Roadmap
 
