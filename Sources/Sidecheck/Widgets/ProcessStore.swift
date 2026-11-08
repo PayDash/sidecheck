@@ -116,6 +116,9 @@ final class ProcessStore: ObservableObject {
         }
         previousCPU = cpuNow
         previousAt = now
+        // Drop names for pids that just disappeared — macOS recycles pids, so
+        // a name keyed only by pid goes stale (and wrong next to Kill) if kept.
+        names = names.filter { cpuNow[$0.key] != nil }
 
         // Sort by the current metric, then resolve names for just the top rows
         // (proc_pidpath is the expensive call; only the top 6 are shown).

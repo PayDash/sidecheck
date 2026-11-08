@@ -84,7 +84,13 @@ struct CropSpec: Codable, Equatable, Hashable {
 
     private enum CodingKeys: String, CodingKey { case scale, offsetX, offsetY }
 
-    init() {}
+    /// Memberwise with defaults — the explicit `init()` would otherwise
+    /// suppress it (tests build variants directly).
+    init(scale: CGFloat = 1, offsetX: CGFloat = 0, offsetY: CGFloat = 0) {
+        self.scale = scale
+        self.offsetX = offsetX
+        self.offsetY = offsetY
+    }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)

@@ -496,7 +496,7 @@ struct AwakeHomeWidget: View {
 
     private func ringProgress(remaining: TimeInterval?, now: Date) -> Double {
         guard let remaining else { return 1 }
-        guard let endDate = awake.endDate, let total = awake.sessionDuration, total > 0 else { return 1 }
+        guard awake.endDate != nil, let total = awake.sessionDuration, total > 0 else { return 1 }
         _ = now
         return remaining / total
     }

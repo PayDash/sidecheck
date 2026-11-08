@@ -11,7 +11,7 @@ The panel is a tiny launcher/OS:
 - **Home screen** — 2–6 widget slots + an app grid (+ dock and search pill on themes that want them). Long-press anything → **edit mode** (jiggle): rebind a widget slot to any app, reorder slots, remove them, hit Done.
 - **Apps** — tap an icon to open the full app page:
   - **Monitor** — CPU ring + per-core bars + history + **live temperature (SMC)**, Memory, Battery, Network, Disk, GPU (model identity; utilization isn't exposed by public macOS APIs), uptime
-  - **Clipboard** — everything you copy system-wide, captured automatically (strings/links, last 50), searchable, tap to re-copy
+  - **Clipboard** — everything you copy system-wide, captured automatically (strings/links, last 50), searchable, tap to re-copy; password fields (secure input) are never captured
   - **Awake** — keep the Mac awake via `/usr/bin/caffeinate`: 1h / 2h / 4h / ∞ or a custom duration, countdown ring + optional home widget, "keep display awake" toggle. Lid closure survives on **AC power** (macOS blocks clamshell on battery — the app warns); sessions stop when Sidecheck quits
   - **Wallpaper** — per-theme backgrounds: the theme's animated look, any other theme's animated style, solid colors, gradient presets (+ angle), **pictures and videos with a pan/zoom crop editor** (drag + pinch/slider) so oversized media can be positioned exactly; videos loop muted (sound toggle) and pause while the panel is hidden; "apply to all themes" for one look everywhere
   - **Settings** — everything below
@@ -100,4 +100,4 @@ SIDECHECK_AUTOSHOW=1 SIDECHECK_OPENAPP=settings .build/release/Sidecheck
 - [ ] Global hotkey to toggle the panel
 
 ---
-*v0.11 — the performance feature registry: Custom mode with per-feature toggles, cost estimates, and auto-by-power. Still built by an agent and its human.* ⚡
+*v0.11.1 — hardening: identity-checked Awake stale-pid cleanup, secure-input clipboard guard, fresh process names, video-player eviction, tests for the parsers and persisted-data fallbacks. Still built by an agent and its human.* ⚡

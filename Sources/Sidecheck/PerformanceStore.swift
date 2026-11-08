@@ -194,8 +194,10 @@ final class PerformanceStore: ObservableObject {
     }
 
     /// Toggle a feature; flips the mode to Custom first (seeding from the
-    /// current set) so presets stay pristine.
+    /// current set) so presets stay pristine. Any manual change also takes
+    /// over from Follow power — same rule as flipping a mode card.
     func setFeature(_ feature: PerformanceFeature, on: Bool) {
+        if autoPower { autoPower = false }
         if mode != .custom {
             customFeatures = activeFeatures
             mode = .custom

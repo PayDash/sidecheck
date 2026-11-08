@@ -64,9 +64,11 @@ final class WallpaperStore: ObservableObject {
 
     func set(_ spec: BackgroundSpec, for theme: ThemeID) {
         specs[theme] = spec
-        if spec.kind != .video {
-            Self.pauseAllVideos() // no video branch mounted → stop its player
-        }
+        // Evict players this spec no longer needs — a video that was replaced
+        // (or a switch away from video entirely) releases its buffers here.
+        // A still-mounted VideoLayerNSView retains its player until SwiftUI
+        // reassigns it, so nothing freezes mid-transition.
+        Self.releaseVideoPlayers(except: Self.videoURL(for: spec))
     }
 
     func reset(for theme: ThemeID) {
@@ -98,6 +100,7 @@ final class WallpaperStore: ObservableObject {
 
     func applyToAllThemes(_ spec: BackgroundSpec) {
         for theme in ThemeID.allCases { specs[theme] = spec }
+        Self.releaseVideoPlayers(except: Self.videoURL(for: spec))
     }
 
     // MARK: - Video players
@@ -105,8 +108,14 @@ final class WallpaperStore: ObservableObject {
     private static var videoPlayers: [URL: AVQueuePlayer] = [:]
     private static var videoLoopers: [URL: AVPlayerLooper] = [:]
 
+    /// The video URL a spec still needs (nil when it isn't a video spec).
+    private static func videoURL(for spec: BackgroundSpec) -> URL? {
+        spec.kind == .video ? spec.filePath.map(URL.init(fileURLWithPath:)) : nil
+    }
+
     /// One looping, muted-by-default player per video, kept alive for the app
-    /// lifetime so re-selecting a wallpaper resumes instantly.
+    /// lifetime so re-selecting a wallpaper resumes instantly. Players for
+    /// media the specs no longer reference are released on every spec change.
     static func videoPlayer(for url: URL) -> AVQueuePlayer {
         if let player = videoPlayers[url] { return player }
         let item = AVPlayerItem(url: url)
@@ -117,9 +126,12 @@ final class WallpaperStore: ObservableObject {
         return player
     }
 
-    static func pauseAllVideos() {
-        for player in videoPlayers.values where player.rate > 0 {
-            player.pause()
+    /// Drops every cached player except `keep` — evicted players deallocate
+    /// (and pause) once nothing mounted still holds them.
+    static func releaseVideoPlayers(except keep: URL?) {
+        for url in videoPlayers.keys where url != keep {
+            videoLoopers[url] = nil
+            videoPlayers[url] = nil
         }
     }
 }

@@ -1,3 +1,4 @@
+import Darwin
 import Foundation
 
 /// Keeps the Mac awake by running /usr/bin/caffeinate as a child process.
@@ -108,18 +109,23 @@ final class AwakeStore: ObservableObject {
 
     /// If a previous run crashed (or nohan force-killed Sidecheck) while a
     /// session was active, the caffeinate child may still be alive — kill it.
+    /// The stored pid may have been recycled by any other process in the
+    /// meantime, so it is killed only if it still is caffeinate.
     private static func terminateStaleChild() {
         let defaults = UserDefaults.standard
         let pid = defaults.integer(forKey: pidKey)
         guard pid > 0 else { return }
         defaults.removeObject(forKey: pidKey)
-        let kill = Process()
-        kill.executableURL = URL(fileURLWithPath: "/usr/bin/kill")
-        kill.arguments = [String(pid)]
-        kill.standardError = FileHandle.nullDevice
-        kill.standardOutput = FileHandle.nullDevice
-        try? kill.run()
-        kill.waitUntilExit()
+        var path = [CChar](repeating: 0, count: 4096) // PROC_PIDPATHINFO_MAXSIZE
+        guard proc_pidpath(pid_t(pid), &path, UInt32(path.count)) > 0 else {
+            fputs("[Sidecheck] awake: stale pid \(pid) is gone — nothing to clean up\n", stderr)
+            return
+        }
+        guard String(cString: path).split(separator: "/").last == "caffeinate" else {
+            fputs("[Sidecheck] awake: stale pid \(pid) was recycled — not killing\n", stderr)
+            return
+        }
+        kill(pid_t(pid), SIGTERM)
         fputs("[Sidecheck] awake: cleaned up stale session (pid \(pid))\n", stderr)
     }
 }

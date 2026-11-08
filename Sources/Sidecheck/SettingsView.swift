@@ -32,7 +32,7 @@ struct SettingsView: View {
                 sectionLabel("DIAGNOSTICS")
                 diagnosticsControls
 
-                Text("Sidecheck v0.11 — performance feature registry, listening stats")
+                Text("Sidecheck v0.11.1 — hardening release")
                     .font(.system(size: 10))
                     .foregroundStyle(theme.textTertiary)
                     .frame(maxWidth: .infinity, alignment: .center)
@@ -268,29 +268,24 @@ struct SettingsView: View {
 
     private var alertControls: some View {
         ThemedCard {
-            Toggle(isOn: Binding(
-                get: { controller.alerter.isEnabled },
-                set: { controller.alerter.isEnabled = $0 }
-            )) {
-                HStack(spacing: 10) {
-                    Image(systemName: "battery.25percent")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(theme.accent)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Low-battery alerts")
-                            .font(.system(size: 13))
-                            .foregroundStyle(theme.textPrimary)
-                        Text("Notify at 20% and 10% while on battery")
-                            .font(.system(size: 10))
-                            .foregroundStyle(theme.textTertiary)
-                    }
+            HStack(spacing: 10) {
+                Image(systemName: "battery.25percent")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(theme.accent)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Low-battery alerts")
+                        .font(.system(size: 13))
+                        .foregroundStyle(theme.textPrimary)
+                    Text("Notify at 20% and 10% while on battery")
+                        .font(.system(size: 10))
+                        .foregroundStyle(theme.textTertiary)
                 }
+                Spacer()
+                ThemeSwitch(isOn: Binding(
+                    get: { controller.alerter.isEnabled },
+                    set: { controller.alerter.isEnabled = $0 }
+                ))
             }
-            Spacer()
-            ThemeSwitch(isOn: Binding(
-                get: { controller.alerter.isEnabled },
-                set: { controller.alerter.isEnabled = $0 }
-            ))
         }
     }
 

@@ -131,7 +131,7 @@ struct PerformanceAppView: View {
             Image(systemName: "powerplug.fill")
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(theme.accent)
-            Text("Managed by power — flip a card to take over.")
+            Text("Managed by power — a manual change takes over.")
                 .font(.system(size: 10))
                 .foregroundStyle(theme.textSecondary)
         }
@@ -206,7 +206,7 @@ struct PerformanceAppView: View {
                         Text("Follow power")
                             .font(.system(size: 12.5))
                             .foregroundStyle(theme.textPrimary)
-                        Text("Saver on battery · Pretty on power. Flipping a card turns this off.")
+                        Text("Saver on battery · Pretty on power. Any manual change turns this off.")
                             .font(.system(size: 10))
                             .foregroundStyle(theme.textTertiary)
                     }

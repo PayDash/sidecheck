@@ -1,4 +1,5 @@
 import AppKit
+import Carbon.HIToolbox
 import SwiftUI
 
 /// Captures text the user copies anywhere on the system by watching the
@@ -65,6 +66,12 @@ final class ClipboardStore: ObservableObject {
         let pasteboard = NSPasteboard.general
         guard pasteboard.changeCount != lastChangeCount else { return }
         lastChangeCount = pasteboard.changeCount
+
+        // A password field holds secure input system-wide — absorb the change
+        // but never capture it (password managers put secrets on the
+        // pasteboard). Must come after the changeCount update, or the same
+        // change re-parses next tick and captures the secret anyway.
+        guard !IsSecureEventInputEnabled() else { return }
 
         guard let text = pasteboard.string(forType: .string),
               !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,

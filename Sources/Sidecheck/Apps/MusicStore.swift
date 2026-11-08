@@ -10,6 +10,46 @@ struct TrackInfo: Equatable {
     var player: String // "Spotify" or "Music"
 }
 
+/// Pure parse of the osascript query output — deliberately outside the
+/// MainActor store so tests can call it with no isolation or state involved.
+///
+/// One row per player, 8 fields joined by ASCII 31 (unit separator — a tab
+/// inside track metadata would otherwise shift every field): player,
+/// isPlaying, title, artist, album, duration, position, artworkURL. The
+/// playing row wins; position comes from the current track's row.
+enum OSAParser {
+    static let fieldSeparator = "\u{1F}"
+
+    static func parse(_ out: String) -> (track: TrackInfo?, isPlaying: Bool, position: Double) {
+        var candidates: [TrackInfo] = []
+        var playing: [TrackInfo] = []
+        for row in out.split(separator: "\n") {
+            let fields = row.components(separatedBy: Self.fieldSeparator)
+            guard fields.count >= 7 else { continue }
+            let info = TrackInfo(
+                title: fields[2].trimmingCharacters(in: .whitespaces),
+                artist: fields[3].trimmingCharacters(in: .whitespaces),
+                album: fields[4].trimmingCharacters(in: .whitespaces),
+                duration: Double(fields[5]) ?? 0,
+                artworkURL: fields.count > 7 && fields[7].hasPrefix("http") ? fields[7] : nil,
+                player: fields[0]
+            )
+            guard !info.title.isEmpty, info.duration > 0 else { continue }
+            candidates.append(info)
+            if fields[1] == "true" { playing.append(info) }
+        }
+
+        let current = playing.first ?? candidates.first
+        let isPlaying = current != nil && playing.first != nil
+        let position = current.flatMap { info in
+            out.split(separator: "\n")
+                .first { $0.components(separatedBy: Self.fieldSeparator).first == info.player }
+                .map { Double($0.components(separatedBy: Self.fieldSeparator)[6]) ?? 0 }
+        } ?? 0
+        return (current, isPlaying, position)
+    }
+}
+
 /// Now-playing state for the Music app. Apple removed third-party access to
 /// the system-wide MediaRemote info on macOS 15.4+, so this polls Spotify and
 /// Music.app through osascript (one Automation prompt per player, on first
@@ -88,8 +128,10 @@ final class MusicStore: ObservableObject {
     }
 
     private func send(_ command: String) {
-        guard let player = track?.player else { return }
-        queue.async { [weak self] in
+        guard let player = track?.player, Self.playerIsRunning() else { return }
+        // osascript's `tell application` would launch a quit player — skip
+        // instead of resurrecting an app the user closed.
+        queue.async {
             _ = Self.runOSA("tell application \"\(player)\" to \(command)")
         }
     }
@@ -132,33 +174,9 @@ final class MusicStore: ObservableObject {
             accessDeniedTo = result.err.contains("Spotify") ? "Spotify" : "Music"
         }
 
-        var candidates: [TrackInfo] = []
-        var playing: [TrackInfo] = []
-        for row in result.out.split(separator: "\n") {
-            let fields = row.components(separatedBy: "\t")
-            guard fields.count >= 7 else { continue }
-            let info = TrackInfo(
-                title: fields[2].trimmingCharacters(in: .whitespaces),
-                artist: fields[3].trimmingCharacters(in: .whitespaces),
-                album: fields[4].trimmingCharacters(in: .whitespaces),
-                duration: Double(fields[5]) ?? 0,
-                artworkURL: fields.count > 7 && fields[7].hasPrefix("http") ? fields[7] : nil,
-                player: fields[0]
-            )
-            guard !info.title.isEmpty, info.duration > 0 else { continue }
-            candidates.append(info)
-            if fields[1] == "true" { playing.append(info) }
-        }
-
-        let current = playing.first ?? candidates.first
-        apply(track: current, isPlaying: current != nil && playing.first != nil)
-
-        let positionValue = current.flatMap { info in
-            result.out.split(separator: "\n")
-                .first { $0.components(separatedBy: "\t").first == info.player }
-                .map { Double($0.components(separatedBy: "\t")[6]) ?? 0 }
-        } ?? 0
-        position = positionValue
+        let parsed = OSAParser.parse(result.out)
+        apply(track: parsed.track, isPlaying: parsed.isPlaying)
+        position = parsed.position
         positionDate = Date()
     }
 
@@ -195,7 +213,9 @@ final class MusicStore: ObservableObject {
 
     // MARK: AppleScript plumbing
 
-    private static func runOSA(_ source: String) -> (status: Int32, out: String, err: String) {
+    // Pure plumbing (Process spawn + immutable script) — nonisolated so the
+    // background queue closures don't hop through the main actor.
+    nonisolated private static func runOSA(_ source: String) -> (status: Int32, out: String, err: String) {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
         process.arguments = ["-e", source]
@@ -221,8 +241,11 @@ final class MusicStore: ObservableObject {
 
     /// Queries both players; the `is running` check never launches an app, and
     /// each player is wrapped in try so a missing app or a denied Automation
-    /// permission just skips that row.
-    private static let queryScript = """
+    /// permission just skips that row. Fields join with ASCII 31 (unit
+    /// separator) — see OSAParser; a tab inside track metadata can't
+    /// break the row.
+    nonisolated private static let queryScript = """
+    set SEP to (ASCII character 31)
     set output to ""
     try
     	if application "Spotify" is running then
@@ -230,7 +253,7 @@ final class MusicStore: ObservableObject {
     			if player state is playing or player state is paused then
     				set tDur to duration of current track
     				if tDur > 50000 then set tDur to tDur / 1000
-    				set output to output & "Spotify" & tab & (player state is playing) & tab & (name of current track) & tab & (artist of current track) & tab & (album of current track) & tab & tDur & tab & (player position) & tab & (artwork url of current track) & linefeed
+    				set output to output & "Spotify" & SEP & (player state is playing) & SEP & (name of current track) & SEP & (artist of current track) & SEP & (album of current track) & SEP & tDur & SEP & (player position) & SEP & (artwork url of current track) & linefeed
     			end if
     		end tell
     	end if
@@ -239,7 +262,7 @@ final class MusicStore: ObservableObject {
     	if application "Music" is running then
     		tell application "Music"
     			if player state is playing or player state is paused then
-    				set output to output & "Music" & tab & (player state is playing) & tab & (name of current track) & tab & (artist of current track) & tab & (album of current track) & tab & (duration of current track) & tab & (player position) & tab & "" & linefeed
+    				set output to output & "Music" & SEP & (player state is playing) & SEP & (name of current track) & SEP & (artist of current track) & SEP & (album of current track) & SEP & (duration of current track) & SEP & (player position) & SEP & "" & linefeed
     			end if
     		end tell
     	end if
