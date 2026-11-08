@@ -107,7 +107,7 @@ final class AwakeStore: ObservableObject {
         fputs("[Sidecheck] awake: started pid \(process.processIdentifier) (\(arguments.joined(separator: " ")))\n", stderr)
     }
 
-    /// If a previous run crashed (or nohan force-killed Sidecheck) while a
+    /// If a previous run crashed (or the user force-killed Sidecheck) while a
     /// session was active, the caffeinate child may still be alive — kill it.
     /// The stored pid may have been recycled by any other process in the
     /// meantime, so it is killed only if it still is caffeinate.
