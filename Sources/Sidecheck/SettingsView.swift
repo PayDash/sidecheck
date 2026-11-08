@@ -14,25 +14,25 @@ struct SettingsView: View {
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 14) {
-                sectionLabel("APPEARANCE")
+                sectionLabel("Appearance")
                 themeGrid
 
-                sectionLabel("PANEL")
+                sectionLabel("Panel")
                 panelControls
 
-                sectionLabel("EDGE ZONE")
+                sectionLabel("Edge zone")
                 edgeControls
 
-                sectionLabel("HOME WIDGETS")
+                sectionLabel("Home widgets")
                 slotControls
 
-                sectionLabel("ALERTS")
+                sectionLabel("Alerts")
                 alertControls
 
-                sectionLabel("DIAGNOSTICS")
+                sectionLabel("Diagnostics")
                 diagnosticsControls
 
-                Text("Sidecheck v0.11.1 — hardening release")
+                Text("Sidecheck v0.12.0 — UI polish, equal-height slots, theme template")
                     .font(.system(size: 10))
                     .foregroundStyle(theme.textTertiary)
                     .frame(maxWidth: .infinity, alignment: .center)
@@ -44,8 +44,7 @@ struct SettingsView: View {
 
     private func sectionLabel(_ text: String) -> some View {
         Text(text)
-            .font(.system(size: 10.5, weight: .bold))
-            .tracking(1.2)
+            .font(.system(size: 11, weight: .semibold))
             .foregroundStyle(theme.textTertiary)
     }
 
@@ -113,7 +112,7 @@ struct SettingsView: View {
                 .font(.system(size: 12, weight: isSelected ? .semibold : .regular))
                 .foregroundStyle(isSelected ? theme.textPrimary : theme.textSecondary)
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 7)
+                .padding(.vertical, 8)
                 .background(isSelected ? theme.accent.opacity(0.15) : theme.cardFill, in: Capsule())
                 .overlay(Capsule().strokeBorder(isSelected ? theme.accent.opacity(0.6) : theme.cardStroke, lineWidth: 1))
         }
@@ -212,9 +211,9 @@ struct SettingsView: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
-            .background(theme.cardFill, in: RoundedRectangle(cornerRadius: theme.cardRadius * 0.7, style: .continuous))
+            .background(theme.cardFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: theme.cardRadius * 0.7, style: .continuous)
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
                     .strokeBorder(theme.cardStroke, lineWidth: 1)
             )
 
@@ -229,9 +228,9 @@ struct SettingsView: View {
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
-                .background(theme.cardFill, in: RoundedRectangle(cornerRadius: theme.cardRadius * 0.7, style: .continuous))
+                .background(theme.cardFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                 .overlay(
-                    RoundedRectangle(cornerRadius: theme.cardRadius * 0.7, style: .continuous)
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
                         .strokeBorder(theme.cardStroke, lineWidth: 1)
                 )
             }
@@ -255,7 +254,7 @@ struct SettingsView: View {
             }
         } label: {
             Image(systemName: direction < 0 ? "chevron.left" : "chevron.right")
-                .font(.system(size: 9, weight: .bold))
+                .font(.system(size: 9, weight: .semibold))
                 .foregroundStyle(enabled ? theme.textSecondary : theme.textTertiary.opacity(0.35))
                 .padding(4)
         }
@@ -309,8 +308,8 @@ struct SettingsView: View {
                         .font(.system(size: 10, weight: .semibold))
                         .monospacedDigit()
                         .foregroundStyle(theme.textTertiary)
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 3)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
                         .background(theme.cardFill, in: Capsule())
                         .overlay(Capsule().strokeBorder(theme.cardStroke, lineWidth: 1))
                 }
@@ -390,7 +389,7 @@ struct SettingsView: View {
     private func metric(_ label: String, _ value: String) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(label)
-                .font(.system(size: 9.5))
+                .font(.system(size: 10))
                 .tracking(0.6)
                 .foregroundStyle(theme.textTertiary)
             Text(value)
@@ -408,7 +407,7 @@ struct SettingsView: View {
                 .fill(ok ? Color.green : Color.red)
                 .frame(width: 7, height: 7)
             Text(name)
-                .font(.system(size: 12.5))
+                .font(.system(size: 13))
                 .foregroundStyle(theme.textPrimary)
             Spacer()
             Text(state)
@@ -473,7 +472,7 @@ struct SettingsView: View {
                 .fill(denied ? Color.red : Color.green)
                 .frame(width: 7, height: 7)
             Text("Notifications")
-                .font(.system(size: 12.5))
+                .font(.system(size: 13))
                 .foregroundStyle(theme.textPrimary)
             Spacer()
             Text(state)
@@ -517,7 +516,7 @@ struct SettingsView: View {
                 .fill(color)
                 .frame(width: 7, height: 7)
             Text("Launch at Login")
-                .font(.system(size: 12.5))
+                .font(.system(size: 13))
                 .foregroundStyle(theme.textPrimary)
             Spacer()
             Text(state)
@@ -539,7 +538,7 @@ struct SettingsView: View {
                 .font(.system(size: 10, weight: .semibold))
                 .foregroundStyle(theme.accent)
                 .padding(.horizontal, 8)
-                .padding(.vertical, 3)
+                .padding(.vertical, 4)
                 .background(theme.accent.opacity(0.12), in: Capsule())
                 .overlay(Capsule().strokeBorder(theme.accent.opacity(0.4), lineWidth: 1))
         }
@@ -581,7 +580,7 @@ struct SettingsView: View {
                         .foregroundStyle(theme.textTertiary)
                 }
                 Image(systemName: "chevron.up.chevron.down")
-                    .font(.system(size: 8, weight: .bold))
+                    .font(.system(size: 9, weight: .semibold))
                     .foregroundStyle(theme.textTertiary)
             }
             .font(.system(size: 12))
@@ -629,7 +628,7 @@ private struct ThemeSwatch: View {
                         }
                     }
                 Text(id.displayName)
-                    .font(.system(size: 10.5, weight: isSelected ? .semibold : .regular))
+                    .font(.system(size: 11, weight: isSelected ? .semibold : .regular))
                     .foregroundStyle(isSelected ? theme.textPrimary : theme.textSecondary)
                     .lineLimit(1)
             }

@@ -33,10 +33,10 @@ struct ScreenTimeAppView: View {
                 headerCard
                 chartCard
 
-                sectionLabel("MOST USED")
+                sectionLabel("Most used")
                 mostUsedCard
 
-                sectionLabel("TRACKING")
+                sectionLabel("Tracking")
                 settingsCard
             }
             .padding(16)
@@ -51,8 +51,7 @@ struct ScreenTimeAppView: View {
 
     private func sectionLabel(_ text: String) -> some View {
         Text(text)
-            .font(.system(size: 10.5, weight: .bold))
-            .tracking(1.2)
+            .font(.system(size: 11, weight: .semibold))
             .foregroundStyle(theme.textTertiary)
     }
 
@@ -72,7 +71,7 @@ struct ScreenTimeAppView: View {
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(range == candidate ? theme.accent : theme.textSecondary)
                         .padding(.horizontal, 16)
-                        .padding(.vertical, 7)
+                        .padding(.vertical, 8)
                         .background(theme.accent.opacity(range == candidate ? 0.16 : 0), in: Capsule())
                         .overlay(
                             Capsule().strokeBorder(
@@ -98,12 +97,12 @@ struct ScreenTimeAppView: View {
                     .frame(width: 46, height: 46)
                     .background(
                         theme.accent.opacity(0.14),
-                        in: RoundedRectangle(cornerRadius: theme.cardRadius * 0.7, style: .continuous)
+                        in: RoundedRectangle(cornerRadius: 10, style: .continuous)
                     )
                     .themeGlow(theme)
-                VStack(alignment: .leading, spacing: 3) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text(Format.duration(displayedTotal))
-                        .font(.system(size: 24, weight: .bold))
+                        .font(.system(size: 24, weight: .semibold))
                         .monospacedDigit()
                         .foregroundStyle(theme.textPrimary)
                         .themeGlow(theme)
@@ -165,7 +164,7 @@ struct ScreenTimeAppView: View {
                     CardTitle(icon: "chart.bar.fill", title: chartTitle)
                     if let caption = selectionCaption {
                         Text(caption)
-                            .font(.system(size: 10.5))
+                            .font(.system(size: 11))
                             .monospacedDigit()
                             .foregroundStyle(theme.textSecondary)
                     }
@@ -178,7 +177,7 @@ struct ScreenTimeAppView: View {
                             }
                         } label: {
                             Label("Whole week", systemImage: "chevron.left")
-                                .font(.system(size: 10.5, weight: .semibold))
+                                .font(.system(size: 11, weight: .semibold))
                                 .foregroundStyle(theme.accent)
                         }
                         .buttonStyle(.plain)
@@ -241,11 +240,11 @@ struct ScreenTimeAppView: View {
 
     private var mostUsedCard: some View {
         ThemedCard {
-            VStack(alignment: .leading, spacing: 11) {
+            VStack(alignment: .leading, spacing: 12) {
                 CardTitle(icon: "list.bullet", title: "Most Used")
                 let entries = displayedApps
                 if entries.isEmpty {
-                    Text("Nothing recorded yet — use some apps and check back.")
+                    Text("Nothing recorded yet — use some apps and check back")
                         .font(.system(size: 11))
                         .foregroundStyle(theme.textTertiary)
                         .frame(maxWidth: .infinity, alignment: .center)
@@ -257,7 +256,7 @@ struct ScreenTimeAppView: View {
                     }
                     if entries.count > 8 {
                         Text("+ \(entries.count - 8) more")
-                            .font(.system(size: 9.5))
+                            .font(.system(size: 10))
                             .foregroundStyle(theme.textTertiary)
                     }
                 }
@@ -338,7 +337,7 @@ struct ScreenTimeAppView: View {
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Track app activity")
-                            .font(.system(size: 12.5))
+                            .font(.system(size: 13))
                             .foregroundStyle(theme.textPrimary)
                         Text("Counts the frontmost app while you're active")
                             .font(.system(size: 10))
@@ -364,12 +363,12 @@ struct ScreenTimeAppView: View {
                     }
                     PanelSlider(value: idleMinutesBinding, range: 1...15, step: 1)
                     Text("No keyboard or mouse input for this long stops the clock.")
-                        .font(.system(size: 9.5))
+                        .font(.system(size: 10))
                         .foregroundStyle(theme.textTertiary)
                 }
 
                 Text("Everything stays on this Mac — nothing is uploaded.")
-                    .font(.system(size: 9.5))
+                    .font(.system(size: 10))
                     .foregroundStyle(theme.textTertiary)
             }
         }
@@ -388,15 +387,15 @@ struct ScreenTimeAppView: View {
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(.orange)
             Text("Tracking is off — nothing is being recorded.")
-                .font(.system(size: 10.5))
+                .font(.system(size: 11))
                 .foregroundStyle(theme.textSecondary)
         }
         .padding(.horizontal, 12)
-        .padding(.vertical, 9)
+        .padding(.vertical, 8)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.orange.opacity(0.10), in: RoundedRectangle(cornerRadius: theme.cardRadius * 0.7, style: .continuous))
+        .background(Color.orange.opacity(0.10), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: theme.cardRadius * 0.7, style: .continuous)
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .strokeBorder(Color.orange.opacity(0.35), lineWidth: 1)
         )
     }
@@ -517,7 +516,7 @@ private struct BarChart: View {
                         let x = CGFloat(index) * slot + slot / 2
                         context.draw(
                             Text(label)
-                                .font(.system(size: 8.5, weight: .medium))
+                                .font(.system(size: 9, weight: .medium))
                                 .foregroundStyle(theme.textTertiary),
                             at: CGPoint(x: x, y: chartHeight + labelSpace / 2 + 1)
                         )

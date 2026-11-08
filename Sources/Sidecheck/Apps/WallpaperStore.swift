@@ -56,10 +56,10 @@ final class WallpaperStore: ObservableObject {
         specs[theme] ?? Self.defaultSpec(for: theme)
     }
 
-    /// Out-of-box look per theme — preserves what the removed theme-native
-    /// kind used to render (liquidGlass bubbles / cyberdeck CRT).
+    /// Out-of-box look per theme — declared in each ThemeSpec's
+    /// `defaultBackground` (liquidGlass bubbles / cyberdeck CRT).
     static func defaultSpec(for theme: ThemeID) -> BackgroundSpec {
-        BackgroundSpec(kind: theme == .cyberdeck ? .crt : .bubbles)
+        BackgroundSpec(kind: theme.spec.defaultBackground)
     }
 
     func set(_ spec: BackgroundSpec, for theme: ThemeID) {

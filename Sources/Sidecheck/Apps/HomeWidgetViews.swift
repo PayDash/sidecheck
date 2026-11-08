@@ -48,13 +48,21 @@ struct AppIconTile: View {
 struct JiggleEffect: ViewModifier {
     let active: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var wobbling = false
 
     func body(content: Content) -> some View {
         if active, !reduceMotion {
-            TimelineView(.periodic(from: .now, by: 0.36)) { context in
-                let phase = context.date.timeIntervalSinceReferenceDate / 0.36
-                content.rotationEffect(.degrees(sin(phase * 2 * .pi) * 1.1))
-            }
+            // Ping-pong rotation via a repeating transform animation — no
+            // TimelineView (which doesn't pass a finite height proposal
+            // through and broke equal-height stretching in edit mode) and no
+            // periodic re-renders of the jiggled content.
+            content
+                .rotationEffect(.degrees(wobbling ? 1.1 : -1.1))
+                .animation(
+                    .linear(duration: 0.36).repeatForever(autoreverses: true),
+                    value: wobbling
+                )
+                .onAppear { wobbling = true }
         } else {
             content
         }
@@ -84,46 +92,67 @@ struct WidgetSlot: View {
     var body: some View {
         Group {
             if home.isEditMode {
-                pickerMenu { slotChrome(kind: kind) }
+                // The card is a plain view (not a Menu label) so the full
+                // widget content renders — rebinding lives in the badge row's
+                // menu button. macOS Menu labels won't render a tall card.
+                slotChrome(kind: kind)
                     .overlay(alignment: .topTrailing) { removeBadge }
             } else if let kind {
                 Button {
+                    // A completed long press has already flipped edit mode on —
+                    // don't also open the app when the finger lifts.
+                    guard !home.isEditMode else { return }
                     onOpen(kind.app)
                 } label: {
                     slotChrome(kind: kind)
                 }
                 .buttonStyle(.plain)
-                .onLongPressGesture(minimumDuration: 0.45) {
-                    withAnimation(.snappy) { home.isEditMode = true }
-                }
+                // Simultaneous, not chained: the long press completes at 0.45 s
+                // even while the tap gesture owns the touch, so holding still
+                // enters edit mode instead of opening the app on release.
+                .simultaneousGesture(
+                    LongPressGesture(minimumDuration: 0.45)
+                        .onEnded { _ in
+                            withAnimation(.snappy) { home.isEditMode = true }
+                        }
+                )
             } else {
                 pickerMenu { emptyChrome }
             }
         }
-        .jiggle(active: home.isEditMode)
     }
 
     // MARK: chrome
 
     @ViewBuilder
     private func slotChrome(kind: WidgetKind?) -> some View {
+        // Stretch to the row height — the row sizes to the tallest sibling,
+        // so every card in a multi-slot row matches (content stays
+        // top-aligned). The single wide slot fills its row by itself.
+        // The jiggle sits INSIDE this frame on purpose: its TimelineView
+        // wrapper doesn't pass a finite height proposal through, so a jiggled
+        // card outside the frame would never stretch (edit-mode bug).
         ThemedCard {
             VStack(alignment: .leading, spacing: 10) {
-                // Music's widget is a self-contained now-playing bar — no
-                // badge row (edit mode keeps it for slot identification).
-                if home.isEditMode || (kind?.showsSlotHeader ?? true) {
+                // Widgets render pure content — the badge + name row exists
+                // only in edit mode, where it identifies the slot, carries the
+                // move chevrons and the rebind menu button.
+                if home.isEditMode {
+                    // Two rows: badge + name on one line, controls on the
+                    // next — a half-width slot can't fit all four in one row.
                     HStack(spacing: 8) {
                         WidgetBadge(kind: kind ?? .settings)
                         Text(kind?.name ?? "Widget")
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundStyle(theme.textSecondary)
+                            .lineLimit(1)
                         Spacer()
-                        if home.isEditMode {
-                            HStack(spacing: 2) {
-                                moveButton(direction: -1, enabled: index > 0)
-                                moveButton(direction: 1, enabled: index < home.effectiveSlots.count - 1)
-                            }
-                        }
+                    }
+                    HStack(spacing: 8) {
+                        bindMenu
+                        Spacer()
+                        moveButton(direction: -1, enabled: index > 0)
+                        moveButton(direction: 1, enabled: index < home.effectiveSlots.count - 1)
                     }
                 }
                 if let kind {
@@ -134,7 +163,12 @@ struct WidgetSlot: View {
                     }
                 }
             }
+            // Flexible content — without this the card's visual only paints
+            // the natural content height, centered inside the stretched slot.
+            .frame(maxHeight: .infinity, alignment: .top)
         }
+        .jiggle(active: home.isEditMode)
+        .frame(maxHeight: .infinity)
     }
 
     private func moveButton(direction: Int, enabled: Bool) -> some View {
@@ -142,7 +176,7 @@ struct WidgetSlot: View {
             home.move(slot: index, direction: direction)
         } label: {
             Image(systemName: direction < 0 ? "chevron.left" : "chevron.right")
-                .font(.system(size: 9, weight: .bold))
+                .font(.system(size: 9, weight: .semibold))
                 .foregroundStyle(enabled ? theme.textSecondary : theme.textTertiary.opacity(0.35))
                 .padding(4)
         }
@@ -154,12 +188,12 @@ struct WidgetSlot: View {
     private var emptyChrome: some View {
         RoundedRectangle(cornerRadius: theme.cardRadius, style: .continuous)
             .strokeBorder(theme.cardStroke, style: StrokeStyle(lineWidth: 1.5, dash: [5]))
-            .frame(height: 96)
+            .frame(minHeight: 96, maxHeight: .infinity)
             .frame(maxWidth: .infinity)
             .overlay {
                 VStack(spacing: 6) {
                     Image(systemName: "plus")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(theme.accent)
                     Text("Add Widget")
                         .font(.system(size: 11))
@@ -173,14 +207,46 @@ struct WidgetSlot: View {
             home.assign(slot: index, kind: nil)
         } label: {
             Image(systemName: "minus")
-                .font(.system(size: 9, weight: .bold))
+                .font(.system(size: 9, weight: .semibold))
                 .foregroundStyle(.white)
-                .padding(5)
+                .padding(4)
                 .background(Circle().fill(Color.red))
         }
         .buttonStyle(.plain)
         .offset(x: 7, y: -7)
         .help("Remove widget")
+    }
+
+    /// The rebind menu button in the edit-mode badge row — a small, fixed-size
+    /// label (same affordance as Settings' slot menu). Small labels render
+    /// fine; the tall card-as-label variant was what macOS clipped to a row.
+    private var bindMenu: some View {
+        Menu {
+            Section("Bind widget") {
+                ForEach(WidgetKind.allCases) { kind in
+                    Button {
+                        home.assign(slot: index, kind: kind)
+                    } label: {
+                        Label(kind.name, systemImage: kind.symbol)
+                    }
+                }
+                Divider()
+                Button("None") {
+                    home.assign(slot: index, kind: nil)
+                }
+            }
+        } label: {
+            Image(systemName: "chevron.up.chevron.down")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(theme.textSecondary)
+                .padding(5)
+                .background(Capsule().fill(theme.cardFill))
+                .overlay(Capsule().strokeBorder(theme.cardStroke, lineWidth: 1))
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .help("Rebind this slot")
     }
 
     private func pickerMenu<Content: View>(@ViewBuilder label: () -> Content) -> some View {
@@ -203,7 +269,6 @@ struct WidgetSlot: View {
         }
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
-        .fixedSize(horizontal: false, vertical: true)
     }
 }
 
@@ -214,11 +279,11 @@ struct WidgetBadge: View {
 
     var body: some View {
         RoundedRectangle(cornerRadius: 5, style: .continuous)
-            .fill(LinearGradient(colors: [kind.tint.opacity(0.9), kind.tint.opacity(0.55)], startPoint: .top, endPoint: .bottom))
+            .fill(kind.tint)
             .frame(width: 18, height: 18)
             .overlay {
                 Image(systemName: kind.symbol)
-                    .font(.system(size: 9, weight: .bold))
+                    .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(.white)
             }
     }
@@ -239,18 +304,18 @@ struct MonitorHomeWidget: View {
             HStack(spacing: 14) {
                 RingGauge(progress: stats.cpuUsage / 100, lineWidth: 6) { EmptyView() }
                     .frame(width: 42, height: 42)
-                VStack(alignment: .leading, spacing: 5) {
+                VStack(alignment: .leading, spacing: 4) {
                     HStack {
                         Text("CPU").font(.system(size: 10)).foregroundStyle(theme.textTertiary)
                         Spacer()
                         Text("\(Int(stats.cpuUsage.rounded()))%")
-                            .font(.system(size: 11, weight: .bold))
+                            .font(.system(size: 11, weight: .semibold))
                             .monospacedDigit()
                             .foregroundStyle(theme.textPrimary)
                     }
                     MeterBar(progress: stats.memoryUsage / 100)
                     Text(tempLine)
-                        .font(.system(size: 9.5))
+                        .font(.system(size: 10))
                         .monospacedDigit()
                         .foregroundStyle(theme.textTertiary)
                 }
@@ -278,7 +343,7 @@ struct BatteryHomeWidget: View {
             HStack(spacing: 14) {
                 RingGauge(progress: Double(percent) / 100, lineWidth: 6) {
                     Text("\(percent)")
-                        .font(.system(size: 12, weight: .bold))
+                        .font(.system(size: 12, weight: .semibold))
                         .monospacedDigit()
                         .foregroundStyle(theme.textPrimary)
                         .contentTransition(.numericText())
@@ -288,7 +353,7 @@ struct BatteryHomeWidget: View {
                     HStack(spacing: 4) {
                         if stats.isCharging {
                             Image(systemName: "bolt.fill")
-                                .font(.system(size: 10, weight: .bold))
+                                .font(.system(size: 10, weight: .semibold))
                                 .foregroundStyle(.green)
                                 .repeatingPulse(performance.isOn(.microAnimations))
                         }
@@ -299,7 +364,7 @@ struct BatteryHomeWidget: View {
                             .fixedSize(horizontal: true, vertical: false)
                     }
                     Text("Reported by macOS")
-                        .font(.system(size: 9.5))
+                        .font(.system(size: 10))
                         .foregroundStyle(theme.textTertiary)
                 }
                 Spacer()
@@ -319,7 +384,7 @@ struct NetworkHomeWidget: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
                 Image(systemName: "arrow.down")
-                    .font(.system(size: 10, weight: .bold))
+                    .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(.blue)
                 Text(Format.rate(stats.netDownBps))
                     .font(.system(size: 11, weight: .semibold))
@@ -327,7 +392,7 @@ struct NetworkHomeWidget: View {
                     .contentTransition(.numericText())
                 Spacer()
                 Image(systemName: "arrow.up")
-                    .font(.system(size: 10, weight: .bold))
+                    .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(.purple)
                 Text(Format.rate(stats.netUpBps))
                     .font(.system(size: 11, weight: .semibold))
@@ -354,7 +419,7 @@ struct DiskHomeWidget: View {
                     .contentTransition(.numericText())
                 Spacer()
                 Text("\(Format.bytes(stats.diskFreeBytes)) free")
-                    .font(.system(size: 9.5))
+                    .font(.system(size: 10))
                     .foregroundStyle(theme.textTertiary)
             }
             MeterBar(progress: stats.diskUsedFraction)
@@ -377,7 +442,7 @@ struct WallpaperHomeWidget: View {
                     Group {
                         if spec.kind == .video {
                             Image(systemName: "play.fill")
-                                .font(.system(size: 9, weight: .bold))
+                                .font(.system(size: 9, weight: .semibold))
                                 .foregroundStyle(.white)
                         } else if spec.kind == .image, let image = WallpaperStore.cachedImage(spec.filePath) {
                             Image(nsImage: image).resizable().scaledToFill()
@@ -386,12 +451,12 @@ struct WallpaperHomeWidget: View {
                 )
                 .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
                 .overlay(RoundedRectangle(cornerRadius: 6, style: .continuous).strokeBorder(theme.cardStroke, lineWidth: 1))
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text("Wallpaper")
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(theme.textPrimary)
                 Text(kindName)
-                    .font(.system(size: 9.5))
+                    .font(.system(size: 10))
                     .foregroundStyle(theme.textTertiary)
             }
             Spacer()
@@ -460,12 +525,12 @@ struct AwakeHomeWidget: View {
                     Group {
                         if let remaining {
                             Text(Self.shortDuration(remaining))
-                                .font(.system(size: 8.5, weight: .bold))
+                                .font(.system(size: 9, weight: .semibold))
                                 .monospacedDigit()
                                 .foregroundStyle(theme.textPrimary)
                         } else {
                             Image(systemName: "infinity")
-                                .font(.system(size: 11, weight: .bold))
+                                .font(.system(size: 11, weight: .semibold))
                                 .foregroundStyle(theme.textPrimary)
                                 .themeGlow(theme)
                         }
@@ -477,7 +542,7 @@ struct AwakeHomeWidget: View {
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(theme.textPrimary)
                     Text(endLabel)
-                        .font(.system(size: 9.5))
+                        .font(.system(size: 10))
                         .monospacedDigit()
                         .foregroundStyle(theme.textTertiary)
                 }
@@ -539,19 +604,19 @@ struct ScreenTimeHomeWidget: View {
         } else {
             HStack(spacing: 12) {
                 Image(systemName: "hourglass")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(theme.accent)
                     .frame(width: 30, height: 30)
                     .background(theme.accent.opacity(0.14), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-                VStack(alignment: .leading, spacing: 3) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text(Format.duration(screenTime.snapshot.todayTotal))
-                        .font(.system(size: 13, weight: .bold))
+                        .font(.system(size: 13, weight: .semibold))
                         .monospacedDigit()
                         .foregroundStyle(theme.textPrimary)
                         .lineLimit(1)
                         .fixedSize(horizontal: true, vertical: false)
                     Text(topAppLine)
-                        .font(.system(size: 9.5))
+                        .font(.system(size: 10))
                         .foregroundStyle(theme.textTertiary)
                         .lineLimit(1)
                 }
@@ -606,7 +671,7 @@ struct ClipboardHomeWidget: View {
                         .multilineTextAlignment(.leading)
                 }
                 Text("\(clipboard.items.count) in history · \(Text(latest.date, format: .relative(presentation: .named)))")
-                    .font(.system(size: 9.5))
+                    .font(.system(size: 10))
                     .monospacedDigit()
                     .foregroundStyle(theme.textTertiary)
             }
@@ -671,27 +736,22 @@ struct MusicHomeWidget: View {
 
     var body: some View {
         if let track = music.track {
-            HStack(spacing: 10) {
+            HStack(spacing: 8) {
                 artworkThumb
-                    .frame(width: 34, height: 34)
-                VStack(alignment: .leading, spacing: 3) {
+                    .frame(width: 44, height: 44)
+                VStack(alignment: .leading, spacing: 4) {
                     Text(track.title)
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(theme.textPrimary)
                         .lineLimit(1)
                     Text(track.artist)
-                        .font(.system(size: 9.5))
+                        .font(.system(size: 10))
                         .foregroundStyle(theme.textTertiary)
                         .lineLimit(1)
                 }
-                Spacer()
-                Image(systemName: music.isPlaying ? "pause.circle.fill" : "play.circle.fill")
-                    .font(.system(size: 16))
-                    .foregroundStyle(theme.accent)
-                    .themeGlow(theme)
             }
         } else {
-            HStack(spacing: 10) {
+            HStack(spacing: 8) {
                 Image(systemName: "music.note")
                     .font(.system(size: 14))
                     .foregroundStyle(theme.textTertiary)
@@ -709,16 +769,16 @@ struct MusicHomeWidget: View {
             Image(nsImage: image)
                 .resizable()
                 .scaledToFill()
-                .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         } else {
-            RoundedRectangle(cornerRadius: 7, style: .continuous)
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .fill(theme.cardFill)
                 .overlay(
                     Image(systemName: "music.note")
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(theme.textTertiary)
                 )
-                .overlay(RoundedRectangle(cornerRadius: 7, style: .continuous).strokeBorder(theme.cardStroke, lineWidth: 1))
+                .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(theme.cardStroke, lineWidth: 1))
         }
     }
 }
@@ -733,18 +793,18 @@ struct MonitorWideWidget: View {
         HStack(spacing: 14) {
             RingGauge(progress: stats.cpuUsage / 100, lineWidth: 6) { EmptyView() }
                 .frame(width: 42, height: 42)
-            VStack(alignment: .leading, spacing: 5) {
+            VStack(alignment: .leading, spacing: 4) {
                 HStack {
                     Text("CPU").font(.system(size: 10)).foregroundStyle(theme.textTertiary)
                     Spacer()
                     Text("\(Int(stats.cpuUsage.rounded()))%")
-                        .font(.system(size: 11, weight: .bold))
+                        .font(.system(size: 11, weight: .semibold))
                         .monospacedDigit()
                         .foregroundStyle(theme.textPrimary)
                 }
                 MeterBar(progress: stats.memoryUsage / 100)
                 Text("MEM \(Int(stats.memoryUsage.rounded()))% · \(Format.bytes(stats.usedMemoryBytes))")
-                    .font(.system(size: 9.5))
+                    .font(.system(size: 10))
                     .monospacedDigit()
                     .foregroundStyle(theme.textTertiary)
             }
@@ -754,7 +814,7 @@ struct MonitorWideWidget: View {
                 rateRow("arrow.up", color: .purple, value: stats.netUpBps)
                 if let temp = stats.cpuTempC {
                     Text(String(format: "%.0f°C", temp))
-                        .font(.system(size: 9.5))
+                        .font(.system(size: 10))
                         .monospacedDigit()
                         .foregroundStyle(theme.textTertiary)
                 }
@@ -765,9 +825,9 @@ struct MonitorWideWidget: View {
     }
 
     private func rateRow(_ symbol: String, color: Color, value: Double) -> some View {
-        HStack(spacing: 5) {
+        HStack(spacing: 4) {
             Image(systemName: symbol)
-                .font(.system(size: 9, weight: .bold))
+                .font(.system(size: 9, weight: .semibold))
                 .foregroundStyle(color)
             Text(Format.rate(value))
                 .font(.system(size: 10, weight: .semibold))
@@ -784,19 +844,19 @@ struct ScreenTimeWideWidget: View {
     var body: some View {
         HStack(spacing: 14) {
             Image(systemName: "hourglass")
-                .font(.system(size: 14, weight: .semibold))
+                .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(theme.accent)
                 .frame(width: 34, height: 34)
                 .background(theme.accent.opacity(0.14), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(Format.duration(screenTime.snapshot.todayTotal))
-                    .font(.system(size: 14, weight: .bold))
+                    .font(.system(size: 13, weight: .semibold))
                     .monospacedDigit()
                     .foregroundStyle(theme.textPrimary)
                     .lineLimit(1)
                     .fixedSize(horizontal: true, vertical: false)
                 Text(topAppLine)
-                    .font(.system(size: 9.5))
+                    .font(.system(size: 10))
                     .foregroundStyle(theme.textTertiary)
                     .lineLimit(1)
             }
@@ -850,36 +910,33 @@ struct MusicWideWidget: View {
 
     var body: some View {
         if let track = music.track {
-            VStack(spacing: 9) {
+            VStack(spacing: 8) {
                 HStack(spacing: 12) {
                     artworkThumb
                         .frame(width: 46, height: 46)
-                    VStack(alignment: .leading, spacing: 3) {
+                    VStack(alignment: .leading, spacing: 4) {
                         Text(track.title)
                             .font(.system(size: 13, weight: .semibold))
                             .foregroundStyle(theme.textPrimary)
                             .lineLimit(1)
                         Text(track.artist)
-                            .font(.system(size: 10.5))
+                            .font(.system(size: 11))
                             .foregroundStyle(theme.textTertiary)
                             .lineLimit(1)
                     }
                     Spacer()
-                    // Mini version of the app page's gradient transport button.
+                    // Mini version of the app page's transport button.
                     Image(systemName: music.isPlaying ? "pause.fill" : "play.fill")
-                        .font(.system(size: 10, weight: .bold))
+                        .font(.system(size: 10, weight: .semibold))
                         .foregroundStyle(.white)
                         .frame(width: 22, height: 22)
-                        .background(
-                            Circle().fill(LinearGradient(
-                                colors: [theme.accent, theme.accent2],
-                                startPoint: .top, endPoint: .bottom
-                            ))
-                        )
-                        .themeGlow(theme)
+                        .background(Circle().fill(theme.accent))
                 }
                 if track.duration > 0 {
-                    MeterBar(progress: min(max(music.positionNow() / track.duration, 0), 1))
+                    // Short glide on each store publish — a continuous tween in a
+                    // slot would run display-rate layout (the layout-storm rule).
+                    MeterBar(progress: min(max(music.positionNow() / track.duration, 0), 1),
+                             animation: .easeOut(duration: 0.5))
                 }
             }
         } else {
@@ -907,7 +964,7 @@ struct MusicWideWidget: View {
                 .fill(theme.cardFill)
                 .overlay(
                     Image(systemName: "music.note")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(theme.textTertiary)
                 )
                 .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(theme.cardStroke, lineWidth: 1))
@@ -922,24 +979,19 @@ struct PerformanceHomeWidget: View {
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: "bolt.fill")
-                .font(.system(size: 13, weight: .bold))
+                .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(.white)
                 .frame(width: 30, height: 30)
-                .background(
-                    Circle().fill(LinearGradient(
-                        colors: [performance.mode.tint.opacity(0.9), performance.mode.tint.opacity(0.55)],
-                        startPoint: .top, endPoint: .bottom
-                    ))
-                )
+                .background(Circle().fill(performance.mode.tint))
                 .themeGlow(theme)
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(performance.mode.label)
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(theme.textPrimary)
                     .lineLimit(1)
                     .fixedSize(horizontal: true, vertical: false)
                 Text(performance.mode.effectCaption)
-                    .font(.system(size: 9.5))
+                    .font(.system(size: 10))
                     .foregroundStyle(theme.textTertiary)
                     .lineLimit(1)
             }

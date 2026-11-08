@@ -89,7 +89,7 @@ struct GPUCard: View {
                     }
                 }
                 Text("Utilization isn't exposed by public macOS APIs")
-                    .font(.system(size: 10.5))
+                    .font(.system(size: 11))
                     .foregroundStyle(theme.textTertiary)
             }
         }

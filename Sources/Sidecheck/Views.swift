@@ -41,7 +41,7 @@ struct ThemedCard<Content: View>: View {
     var body: some View {
         content()
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(14)
+            .padding(16)
             .background(
                 RoundedRectangle(cornerRadius: theme.cardRadius, style: .continuous)
                     .fill(theme.cardFill)
@@ -51,7 +51,7 @@ struct ThemedCard<Content: View>: View {
                     )
             )
             .overlay {
-                if theme.id == .cyberdeck {
+                if theme.showsCornerBrackets {
                     CornerBrackets(color: theme.accent.opacity(0.7))
                 }
             }
@@ -62,7 +62,7 @@ struct ThemedCard<Content: View>: View {
             )
             .scaleEffect(hovered && !reduceMotion ? 1.015 : 1)
             .onHover { hovered = $0 }
-            .animation(.spring(response: 0.3, dampingFraction: 0.8), value: hovered)
+            .animation(.spring(response: 0.3, dampingFraction: 0.85), value: hovered)
     }
 }
 
@@ -120,7 +120,7 @@ struct RingGauge<Value: View>: View {
                 .themeGlow(theme)
         }
         .overlay(content())
-        .animation(.spring(response: 0.6, dampingFraction: 0.9), value: progress)
+        .animation(.spring(response: 0.3, dampingFraction: 0.85), value: progress)
     }
 }
 
@@ -171,7 +171,7 @@ struct CardTitle: View {
     var body: some View {
         HStack(spacing: 6) {
             Image(systemName: icon)
-                .font(.system(size: 12, weight: .semibold))
+                .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(tint ?? theme.accent)
             Text(title)
                 .font(.system(size: 13, weight: .semibold))
@@ -234,9 +234,8 @@ struct PanelSlider: View {
                     .fill(theme.divider)
                     .frame(height: 6)
                 Capsule()
-                    .fill(LinearGradient(colors: [theme.accent, theme.accent2], startPoint: .leading, endPoint: .trailing))
+                    .fill(theme.accent)
                     .frame(width: max(0, geo.size.width * CGFloat(fraction)), height: 6)
-                    .themeGlow(theme)
                 Circle()
                     .fill(theme.textPrimary)
                     .frame(width: 16, height: 16)

@@ -27,6 +27,22 @@ Three themes on one theme-agnostic base — each theme picks its own **frame siz
 | **Liquid Glass** | 380×680 | dark vibrancy + rising glass bubbles |
 | **Cyberdeck** | 380×680 | phosphor terminal, scanlines, `» TEXT MENU` home template |
 
+### Adding a theme
+
+Everything a theme does is declared in its `ThemeSpec` — no view special-cases a concrete theme id.
+
+**Required (compile errors guide you — all in `ThemeStore.swift`):**
+
+1. Add the `ThemeID` enum case
+2. `displayName` + `symbol` switches
+3. Add a `static let` `ThemeSpec` — all fields, including `showsCornerBrackets` and `defaultBackground`
+4. `ThemeID.spec` extension switch
+5. `previewGradient` switch (settings swatch)
+
+**Spec knobs to choose:** `frameSize` (width ≥ 500 unlocks 6 home slots), `homeStyle` (icon tiles / terminal list), `homeStyle` decorations (`showsDock`, `showsSearchPill`, `showsClockInHeader` — pill/clock are currently false on both themes and kept as levers), `iconCornerRadiusRatio`, `iconLabelIsWhite`, `glow` (phosphor glow, Cyberdeck-only by design), `isLight` (switches system appearance), accent + text-role colors, `defaultBackground` (out-of-box wallpaper kind), `showsCornerBrackets` (card decoration).
+
+**Automatic — no code needed:** settings theme grid, menu-bar Theme submenu (identified by rawValue, never by row index), persisted `themeID` restore, per-theme `wallpaperSpecs` decode, window frame morph on switch, `ThemeTemplateTests` (fails if the spec is incomplete).
+
 ![cyberdeck](docs/screenshots/theme-cyberdeck.png)
 
 ## Customization (Settings app)
@@ -100,4 +116,4 @@ SIDECHECK_AUTOSHOW=1 SIDECHECK_OPENAPP=settings .build/release/Sidecheck
 - [ ] Global hotkey to toggle the panel
 
 ---
-*v0.11.1 — hardening: identity-checked Awake stale-pid cleanup, secure-input clipboard guard, fresh process names, video-player eviction, tests for the parsers and persisted-data fallbacks. Still built by an agent and its human.* ⚡
+*v0.12.0 — UI polish pass (solid accent chrome, type scale, sentence-case labels, 4-grid spacing, one micro-spring), equal-height widget slots, edit mode with full widget content + rebind button, long-press fix, gliding music progress, theme template readiness (spec tokens + tests + "Adding a theme" checklist). Still built by an agent and its human.* ⚡

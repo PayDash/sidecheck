@@ -16,10 +16,10 @@ struct HomeScreen: View {
     private var homeContent: some View {
         VStack(spacing: 0) {
             ScrollView(showsIndicators: false) {
-                VStack(spacing: 18) {
+                VStack(spacing: 16) {
                     if home.isEditMode {
-                        Text("Tap a widget to rebind it · long-press to leave edit mode")
-                            .font(.system(size: 10.5))
+                        Text("Rebind a widget with its menu button · long-press to leave edit mode")
+                            .font(.system(size: 11))
                             .foregroundStyle(theme.textSecondary)
                     }
                     widgetRow
@@ -34,7 +34,7 @@ struct HomeScreen: View {
             if theme.showsDock {
                 dock
                     .padding(.horizontal, 16)
-                    .padding(.bottom, 14)
+                    .padding(.bottom, 16)
             }
         }
         .onLongPressGesture(minimumDuration: 0.5) {
@@ -46,12 +46,15 @@ struct HomeScreen: View {
 
     private var widgetRow: some View {
         // A single slot spans the full width and renders the widget's wide
-        // variant; 2+ slots use the compact layouts.
+        // variant; 2+ slots use the compact layouts. EqualHeightRow (not
+        // HStack/Grid) so every card gets the row's tallest height proposed
+        // back to it — HStack and Grid align smaller siblings instead of
+        // proposing the computed height, so `maxHeight: .infinity` alone
+        // never equalized bare (non-Button) cards.
         let wide = home.effectiveSlots.count == 1
-        return HStack(alignment: .top, spacing: 12) {
+        return EqualHeightRow(spacing: 12) {
             ForEach(home.effectiveSlots.indices, id: \.self) { index in
                 WidgetSlot(index: index, onOpen: onOpenApp, wide: wide)
-                    .frame(maxWidth: .infinity)
             }
         }
         .compositingGroup()
@@ -59,6 +62,37 @@ struct HomeScreen: View {
     }
 
     // MARK: app launcher
+
+    /// An HStack whose cells all receive the row's tallest height as their
+    /// proposal, so `maxHeight: .infinity` inside any cell stretches it to
+    /// match. HStack/Grid align smaller siblings within the row area instead
+    /// of proposing the computed height, which is why bare cards (no Button
+    /// wrapper) never equalized.
+    private struct EqualHeightRow: Layout {
+        var spacing: CGFloat = 12
+
+        func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+            let width = proposal.width ?? subviews.reduce(0) {
+                $0 + $1.sizeThatFits(.unspecified).width
+            } + spacing * CGFloat(max(subviews.count - 1, 0))
+            let height = subviews.map { $0.sizeThatFits(.unspecified).height }.max() ?? 0
+            return CGSize(width: width, height: height)
+        }
+
+        func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+            let maxHeight = subviews.map { $0.sizeThatFits(.unspecified).height }.max() ?? 0
+            let cellWidth = (bounds.width - spacing * CGFloat(max(subviews.count - 1, 0)))
+                / CGFloat(max(subviews.count, 1))
+            var x = bounds.minX
+            for subview in subviews {
+                subview.place(
+                    at: CGPoint(x: x, y: bounds.minY),
+                    proposal: ProposedViewSize(width: cellWidth, height: maxHeight)
+                )
+                x += cellWidth + spacing
+            }
+        }
+    }
 
     @ViewBuilder
     private var appArea: some View {
@@ -93,21 +127,21 @@ struct HomeScreen: View {
                 } label: {
                     HStack(spacing: 10) {
                         Text("»")
-                            .font(.system(size: 12, weight: .bold, design: .monospaced))
+                            .font(.system(size: 12, weight: .semibold, design: .monospaced))
                             .foregroundStyle(theme.accent)
                         Text(PanelApp.app(id).name.uppercased())
                             .font(.system(size: 13, weight: .semibold, design: .monospaced))
                             .foregroundStyle(theme.textPrimary)
                         Spacer()
                         Image(systemName: "chevron.right")
-                            .font(.system(size: 9, weight: .bold))
+                            .font(.system(size: 9, weight: .semibold))
                             .foregroundStyle(theme.textTertiary)
                     }
                     .padding(.horizontal, 12)
                     .padding(.vertical, 10)
-                    .background(theme.cardFill, in: RoundedRectangle(cornerRadius: theme.cardRadius * 0.6, style: .continuous))
+                    .background(theme.cardFill, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
                     .overlay(
-                        RoundedRectangle(cornerRadius: theme.cardRadius * 0.6, style: .continuous)
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
                             .strokeBorder(theme.cardStroke, lineWidth: 1)
                     )
                 }
@@ -128,7 +162,7 @@ struct HomeScreen: View {
                 .foregroundStyle(theme.textSecondary)
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 7)
+        .padding(.vertical, 8)
         .background(Capsule().fill(theme.cardFill))
         .overlay(Capsule().strokeBorder(theme.cardStroke, lineWidth: 1))
         .help("Just for the vibe")

@@ -90,13 +90,6 @@ struct MusicAppView: View {
         }
     }
 
-    private func sectionLabel(_ text: String) -> some View {
-        Text(text)
-            .font(.system(size: 10.5, weight: .bold))
-            .tracking(1.2)
-            .foregroundStyle(theme.textTertiary)
-    }
-
     // MARK: Tabs
 
     private var tabPills: some View {
@@ -120,7 +113,7 @@ struct MusicAppView: View {
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(selected ? theme.accent : theme.textSecondary)
                 .padding(.horizontal, 13)
-                .padding(.vertical, 7)
+                .padding(.vertical, 8)
                 .background(theme.accent.opacity(selected ? 0.16 : 0), in: Capsule())
                 .overlay(
                     Capsule().strokeBorder(
@@ -138,10 +131,10 @@ struct MusicAppView: View {
         VStack(alignment: .leading, spacing: 10) {
             let entries = mergedHistory
             ThemedCard {
-                VStack(alignment: .leading, spacing: 11) {
+                VStack(alignment: .leading, spacing: 12) {
                     CardTitle(icon: "clock.arrow.circlepath", title: "Recent plays")
                     if entries.isEmpty {
-                        emptyCaption("Nothing yet — play something and it lands here.")
+                        emptyCaption("Nothing yet — play something and it lands here")
                     } else {
                         ForEach(entries.prefix(12)) { entry in
                             streamRow(entry)
@@ -151,7 +144,7 @@ struct MusicAppView: View {
             }
             if statsFm.isConfigured {
                 Text("Merging this Mac + stats.fm")
-                    .font(.system(size: 9.5))
+                    .font(.system(size: 10))
                     .foregroundStyle(theme.textTertiary)
             }
         }
@@ -194,7 +187,7 @@ struct MusicAppView: View {
                     .foregroundStyle(theme.textPrimary)
                     .lineLimit(1)
                 Text("\(entry.artist) · \(entry.source) · \(Self.timeAgo(entry.playedAt))")
-                    .font(.system(size: 9.5))
+                    .font(.system(size: 10))
                     .foregroundStyle(theme.textTertiary)
                     .lineLimit(1)
             }
@@ -226,7 +219,7 @@ struct MusicAppView: View {
                         Text(range.label)
                             .font(.system(size: 10, weight: .semibold))
                             .foregroundStyle(topRange == range ? theme.accent : theme.textTertiary)
-                            .padding(.horizontal, 9)
+                            .padding(.horizontal, 8)
                             .padding(.vertical, 4)
                             .background(theme.accent.opacity(topRange == range ? 0.14 : 0), in: Capsule())
                             .overlay(Capsule().strokeBorder(topRange == range ? theme.accent.opacity(0.5) : theme.cardStroke, lineWidth: 1))
@@ -237,12 +230,12 @@ struct MusicAppView: View {
             }
 
             ThemedCard {
-                VStack(alignment: .leading, spacing: 11) {
+                VStack(alignment: .leading, spacing: 12) {
                     HStack {
                         CardTitle(icon: topKind == .artists ? "mic.fill" : "music.note.list", title: "Top \(topKind.rawValue)")
                         Spacer()
                         Text(statsFm.isConfigured ? "stats.fm" : "This Mac")
-                            .font(.system(size: 9.5, weight: .semibold))
+                            .font(.system(size: 10, weight: .semibold))
                             .foregroundStyle(theme.textTertiary)
                     }
                     topList
@@ -331,14 +324,14 @@ struct MusicAppView: View {
     /// Generic ranked rows: rank #, thumb, name, optional plays, meter.
     private func rankedList(_ items: [RankedRow]) -> some View {
         let maxPlays = items.compactMap(\.plays).max() ?? 0
-        return VStack(alignment: .leading, spacing: 11) {
+        return VStack(alignment: .leading, spacing: 12) {
             if items.isEmpty {
                 emptyCaption("No streams in this range yet")
             }
             ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
                 HStack(spacing: 10) {
                     Text("\(index + 1)")
-                        .font(.system(size: 11, weight: .bold))
+                        .font(.system(size: 11, weight: .semibold))
                         .monospacedDigit()
                         .foregroundStyle(theme.textTertiary)
                         .frame(width: 14)
@@ -350,7 +343,7 @@ struct MusicAppView: View {
                             .lineLimit(1)
                         if let plays = item.plays, plays > 0 {
                             Text("\(plays) plays")
-                                .font(.system(size: 9.5))
+                                .font(.system(size: 10))
                                 .monospacedDigit()
                                 .foregroundStyle(theme.textTertiary)
                         }
@@ -377,7 +370,7 @@ struct MusicAppView: View {
                                 .foregroundStyle(theme.textSecondary)
                         }
                         if let summary = statsSummary {
-                            HStack(spacing: 18) {
+                            HStack(spacing: 16) {
                                 statValue("\(summary.minutes ?? 0)", "minutes · weeks")
                                 statValue("\(summary.streams ?? 0)", "streams · weeks")
                             }
@@ -393,12 +386,12 @@ struct MusicAppView: View {
             ThemedCard {
                 VStack(alignment: .leading, spacing: 8) {
                     CardTitle(icon: "macwindow", title: "This Mac")
-                    HStack(spacing: 18) {
+                    HStack(spacing: 16) {
                         statValue(Format.duration(listening.totalTrackedSeconds), "tracked listening")
                         statValue("\(listening.totalTrackCount)", "tracks heard")
                     }
-                    Text("Accumulates in the background whenever Spotify or Music runs.")
-                        .font(.system(size: 9.5))
+                    Text("Accumulates in the background whenever Spotify or Music runs")
+                        .font(.system(size: 10))
                         .foregroundStyle(theme.textTertiary)
                 }
             }
@@ -411,12 +404,12 @@ struct MusicAppView: View {
     private func statValue(_ value: String, _ label: String) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(value)
-                .font(.system(size: 15, weight: .bold))
+                .font(.system(size: 15, weight: .semibold))
                 .monospacedDigit()
                 .foregroundStyle(theme.textPrimary)
                 .themeGlow(theme)
             Text(label)
-                .font(.system(size: 9.5))
+                .font(.system(size: 10))
                 .foregroundStyle(theme.textTertiary)
         }
     }
@@ -431,10 +424,10 @@ struct MusicAppView: View {
             statsSummary = nil
         } label: {
             Text("Disconnect")
-                .font(.system(size: 10.5, weight: .semibold))
+                .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(.white)
                 .padding(.horizontal, 12)
-                .padding(.vertical, 5)
+                .padding(.vertical, 4)
                 .background(Color.red.opacity(0.85), in: Capsule())
         }
         .buttonStyle(.plain)
@@ -469,10 +462,10 @@ struct MusicAppView: View {
                             .font(.system(size: 11, weight: .semibold))
                             .foregroundStyle(theme.accent)
                             .frame(maxWidth: .infinity)
-                            .padding(.vertical, 7)
-                            .background(theme.accent.opacity(0.12), in: RoundedRectangle(cornerRadius: theme.cardRadius * 0.7, style: .continuous))
+                            .padding(.vertical, 8)
+                            .background(theme.accent.opacity(0.12), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                             .overlay(
-                                RoundedRectangle(cornerRadius: theme.cardRadius * 0.7, style: .continuous)
+                                RoundedRectangle(cornerRadius: 10, style: .continuous)
                                     .strokeBorder(theme.accent.opacity(0.4), lineWidth: 1)
                             )
                     }
@@ -499,9 +492,9 @@ struct MusicAppView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(theme.cardFill, in: RoundedRectangle(cornerRadius: theme.cardRadius * 0.8, style: .continuous))
+        .background(theme.cardFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: theme.cardRadius * 0.8, style: .continuous)
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .strokeBorder(theme.cardStroke, lineWidth: 1)
         )
     }
@@ -525,7 +518,7 @@ struct MusicAppView: View {
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text(track.title)
-                            .font(.system(size: 15, weight: .bold))
+                            .font(.system(size: 15, weight: .semibold))
                             .foregroundStyle(theme.textPrimary)
                             .themeGlow(theme)
                             .lineLimit(1)
@@ -535,20 +528,20 @@ struct MusicAppView: View {
                             .lineLimit(1)
                         if !track.album.isEmpty {
                             Text(track.album)
-                                .font(.system(size: 10.5))
+                                .font(.system(size: 11))
                                 .foregroundStyle(theme.textTertiary)
                                 .lineLimit(1)
                         }
                         HStack(spacing: 4) {
                             Image(systemName: "waveform")
-                                .font(.system(size: 8, weight: .semibold))
+                                .font(.system(size: 9, weight: .semibold))
                                 .foregroundStyle(theme.textTertiary)
                             Text(track.player)
-                                .font(.system(size: 9.5, weight: .semibold))
+                                .font(.system(size: 10, weight: .semibold))
                                 .foregroundStyle(theme.textTertiary)
                         }
                         .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
+                        .padding(.vertical, 4)
                         .background(theme.cardFill, in: Capsule())
                         .overlay(Capsule().strokeBorder(theme.cardStroke, lineWidth: 1))
                     }
@@ -578,14 +571,16 @@ struct MusicAppView: View {
         let current = music.positionNow()
         let fraction = track.duration > 0 ? min(max(current / track.duration, 0), 1) : 0
         return VStack(alignment: .leading, spacing: 4) {
-            MeterBar(progress: fraction)
+            // 1 Hz ticks + a 1.05 s linear tween read as one gliding bar.
+            MeterBar(progress: fraction, animation: .linear(duration: 1.05))
             HStack {
                 Text(Self.clock(current))
                 Spacer()
                 Text("-" + Self.clock(max(track.duration - current, 0)))
             }
-            .font(.system(size: 9.5))
+            .font(.system(size: 10))
             .monospacedDigit()
+            .contentTransition(.numericText())
             .foregroundStyle(theme.textTertiary)
         }
     }
@@ -598,16 +593,10 @@ struct MusicAppView: View {
                 music.playPause()
             } label: {
                 Image(systemName: music.isPlaying ? "pause.fill" : "play.fill")
-                    .font(.system(size: 20, weight: .bold))
+                    .font(.system(size: 20, weight: .semibold))
                     .foregroundStyle(.white)
                     .frame(width: 56, height: 56)
-                    .background(
-                        Circle().fill(LinearGradient(
-                            colors: [theme.accent, theme.accent2],
-                            startPoint: .top, endPoint: .bottom
-                        ))
-                    )
-                    .themeGlow(theme)
+                    .background(Circle().fill(theme.accent))
             }
             .buttonStyle(.plain)
             transportButton("forward.fill", size: 15) { music.next() }
@@ -633,13 +622,13 @@ struct MusicAppView: View {
             Image(nsImage: image)
                 .resizable()
                 .scaledToFill()
-                .clipShape(RoundedRectangle(cornerRadius: theme.cardRadius * 0.7, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                 .overlay(
-                    RoundedRectangle(cornerRadius: theme.cardRadius * 0.7, style: .continuous)
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
                         .strokeBorder(theme.cardStroke, lineWidth: 1)
                 )
         } else {
-            RoundedRectangle(cornerRadius: theme.cardRadius * 0.7, style: .continuous)
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .fill(theme.cardFill)
                 .overlay(
                     Image(systemName: "music.note")
@@ -647,7 +636,7 @@ struct MusicAppView: View {
                         .foregroundStyle(theme.textTertiary)
                 )
                 .overlay(
-                    RoundedRectangle(cornerRadius: theme.cardRadius * 0.7, style: .continuous)
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
                         .strokeBorder(theme.cardStroke, lineWidth: 1)
                 )
         }
@@ -657,13 +646,13 @@ struct MusicAppView: View {
         ThemedCard {
             VStack(spacing: 10) {
                 Image(systemName: "music.note")
-                    .font(.system(size: 28, weight: .semibold))
+                    .font(.system(size: 24, weight: .semibold))
                     .foregroundStyle(theme.textTertiary)
                     .themeGlow(theme)
                 Text("Nothing playing")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(theme.textPrimary)
-                Text("Play something in Spotify or Music — it shows up here.")
+                Text("Play something in Spotify or Music — it shows up here")
                     .font(.system(size: 11))
                     .foregroundStyle(theme.textTertiary)
                     .multilineTextAlignment(.center)
@@ -679,15 +668,15 @@ struct MusicAppView: View {
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(.orange)
             Text("Automation is denied for \(player) — allow it in System Settings → Privacy & Security → Automation.")
-                .font(.system(size: 10.5))
+                .font(.system(size: 11))
                 .foregroundStyle(theme.textSecondary)
         }
         .padding(.horizontal, 12)
-        .padding(.vertical, 9)
+        .padding(.vertical, 8)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.orange.opacity(0.10), in: RoundedRectangle(cornerRadius: theme.cardRadius * 0.7, style: .continuous))
+        .background(Color.orange.opacity(0.10), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: theme.cardRadius * 0.7, style: .continuous)
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .strokeBorder(Color.orange.opacity(0.35), lineWidth: 1)
         )
     }

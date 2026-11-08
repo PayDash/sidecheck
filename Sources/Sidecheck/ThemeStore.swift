@@ -57,6 +57,11 @@ struct ThemeSpec {
     let showsClockInHeader: Bool
     let iconLabelIsWhite: Bool // white labels with shadow (dark wallpapers)
 
+    // Per-theme declarations — the last two hardcodes that used to live in
+    // view/store code. A new theme declares both instead of editing callers.
+    let showsCornerBrackets: Bool               // ThemedCard decoration (cyberdeck)
+    let defaultBackground: BackgroundKind       // out-of-box wallpaper (WallpaperStore.defaultSpec)
+
     static let liquidGlass = ThemeSpec(
         id: .liquidGlass,
         panelRadius: 34,
@@ -81,6 +86,9 @@ struct ThemeSpec {
         showsSearchPill: false,
         showsClockInHeader: false,
         iconLabelIsWhite: true,
+
+        showsCornerBrackets: false,
+        defaultBackground: .bubbles,
     )
 
     /// How many home-widget slots fit this frame without crushing widget
@@ -113,6 +121,9 @@ struct ThemeSpec {
         showsSearchPill: false,
         showsClockInHeader: false,
         iconLabelIsWhite: false,
+
+        showsCornerBrackets: true,
+        defaultBackground: .crt,
     )
 }
 

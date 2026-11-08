@@ -14,10 +14,10 @@ struct AwakeAppView: View {
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 14) {
-                sectionLabel("STATUS")
+                sectionLabel("Status")
                 statusCard
 
-                sectionLabel("DURATION")
+                sectionLabel("Duration")
                 durationCard
 
                 if onBattery {
@@ -30,8 +30,7 @@ struct AwakeAppView: View {
 
     private func sectionLabel(_ text: String) -> some View {
         Text(text)
-            .font(.system(size: 10.5, weight: .bold))
-            .tracking(1.2)
+            .font(.system(size: 11, weight: .semibold))
             .foregroundStyle(theme.textTertiary)
     }
 
@@ -63,9 +62,9 @@ struct AwakeAppView: View {
                         .frame(width: 74, height: 74)
                 }
 
-                VStack(alignment: .leading, spacing: 5) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text(awake.isActive ? "Awake" : "Off")
-                        .font(.system(size: 16, weight: .bold, design: theme.fontDesign))
+                        .font(.system(size: 16, weight: .semibold, design: theme.fontDesign))
                         .foregroundStyle(theme.textPrimary)
                         .themeGlow(theme)
                     Text(statusDetail)
@@ -80,7 +79,7 @@ struct AwakeAppView: View {
                                 .font(.system(size: 11, weight: .semibold))
                                 .foregroundStyle(.white)
                                 .padding(.horizontal, 12)
-                                .padding(.vertical, 5)
+                                .padding(.vertical, 4)
                                 .background(Color.red.opacity(0.85), in: Capsule())
                         }
                         .buttonStyle(.plain)
@@ -100,12 +99,12 @@ struct AwakeAppView: View {
                 VStack(spacing: 0) {
                     if let remaining {
                         Text(Self.shortDuration(remaining))
-                            .font(.system(size: 11, weight: .bold))
+                            .font(.system(size: 11, weight: .semibold))
                             .monospacedDigit()
                             .foregroundStyle(theme.textPrimary)
                     } else {
                         Image(systemName: "infinity")
-                            .font(.system(size: 15, weight: .bold))
+                            .font(.system(size: 15, weight: .semibold))
                             .foregroundStyle(theme.textPrimary)
                             .themeGlow(theme)
                     }
@@ -187,9 +186,9 @@ struct AwakeAppView: View {
                         .foregroundStyle(theme.accent)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 8)
-                        .background(theme.accent.opacity(0.12), in: RoundedRectangle(cornerRadius: theme.cardRadius * 0.7, style: .continuous))
+                        .background(theme.accent.opacity(0.12), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                         .overlay(
-                            RoundedRectangle(cornerRadius: theme.cardRadius * 0.7, style: .continuous)
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
                                 .strokeBorder(theme.accent.opacity(0.4), lineWidth: 1)
                         )
                 }
@@ -199,7 +198,7 @@ struct AwakeAppView: View {
                 HStack(spacing: 10) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Keep display awake")
-                            .font(.system(size: 12.5))
+                            .font(.system(size: 13))
                             .foregroundStyle(theme.textPrimary)
                         Text("Off = screen may sleep, Mac stays awake")
                             .font(.system(size: 10))
@@ -233,7 +232,7 @@ struct AwakeAppView: View {
                 .font(.system(size: 13, weight: .semibold, design: theme.fontDesign))
                 .foregroundStyle(theme.textPrimary)
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 9)
+                .padding(.vertical, 8)
                 .background(theme.cardFill, in: Capsule())
                 .overlay(Capsule().strokeBorder(theme.cardStroke, lineWidth: 1))
         }
@@ -248,15 +247,15 @@ struct AwakeAppView: View {
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(.orange)
             Text("On battery — lid closed still sleeps the Mac. Plug in for clamshell mode.")
-                .font(.system(size: 10.5))
+                .font(.system(size: 11))
                 .foregroundStyle(theme.textSecondary)
         }
         .padding(.horizontal, 12)
-        .padding(.vertical, 9)
+        .padding(.vertical, 8)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.orange.opacity(0.10), in: RoundedRectangle(cornerRadius: theme.cardRadius * 0.7, style: .continuous))
+        .background(Color.orange.opacity(0.10), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: theme.cardRadius * 0.7, style: .continuous)
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .strokeBorder(Color.orange.opacity(0.35), lineWidth: 1)
         )
     }

@@ -163,9 +163,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(enabledItem)
 
         let themeMenu = NSMenu(title: "Theme")
-        for (index, theme) in ThemeID.allCases.enumerated() {
+        for theme in ThemeID.allCases {
             let themeItem = NSMenuItem(title: theme.displayName, action: #selector(setTheme(_:)), keyEquivalent: "")
-            themeItem.tag = index
+            // Identify by rawValue, not row index — the menu and the state
+            // refresh can never drift out of sync as themes come and go.
+            themeItem.representedObject = theme.rawValue
             themeItem.target = self
             themeMenu.addItem(themeItem)
         }
@@ -204,8 +206,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             default: break
             }
         }
-        for (index, theme) in ThemeID.allCases.enumerated() {
-            themeMenu?.items[index].state = panelController.themeStore.current == theme ? .on : .off
+        for item in themeMenu?.items ?? [] {
+            guard let raw = item.representedObject as? String,
+                  let theme = ThemeID(rawValue: raw) else { continue }
+            item.state = panelController.themeStore.current == theme ? .on : .off
         }
     }
 
@@ -222,9 +226,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     @objc private func setTheme(_ sender: NSMenuItem) {
-        let all = ThemeID.allCases
-        guard sender.tag >= 0 && sender.tag < all.count else { return }
-        panelController.themeStore.current = all[sender.tag]
+        guard let raw = sender.representedObject as? String,
+              let theme = ThemeID(rawValue: raw) else { return }
+        panelController.themeStore.current = theme
         refreshMenuStates()
     }
 

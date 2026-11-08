@@ -192,7 +192,7 @@ struct GlassBubblesBackground: View {
     private func draw(_ bubble: Bubble, time t: Double, in context: GraphicsContext, size: CGSize) {
         let x = bubble.xFrac * size.width + sin(t * bubble.wobbleSpeed + bubble.phase * 7) * bubble.wobbleAmp
         let travel = size.height + bubble.radius * 2
-        var y = size.height + bubble.radius - (t * bubble.speed + bubble.phase * travel)
+        let y = size.height + bubble.radius - (t * bubble.speed + bubble.phase * travel)
             .truncatingRemainder(dividingBy: travel)
 
         // fade out near the top edge / in near the bottom
@@ -217,6 +217,7 @@ struct GlassBubblesBackground: View {
         )
         // top sheen
         let sheen = CGRect(x: x - bubble.radius * 0.45, y: y - bubble.radius * 0.62, width: bubble.radius * 0.72, height: bubble.radius * 0.42)
+
         context.fill(
             Path(ellipseIn: sheen),
             with: .color(.white.opacity(0.15 * edge))

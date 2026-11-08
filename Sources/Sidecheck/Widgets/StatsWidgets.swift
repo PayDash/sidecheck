@@ -20,20 +20,20 @@ struct CPUCard: View {
                             .monospacedDigit()
                             .foregroundStyle(theme.accent2)
                             .contentTransition(.numericText())
-                            .padding(.horizontal, 7)
-                            .padding(.vertical, 3)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
                             .background(theme.cardFill, in: Capsule())
                             .overlay(Capsule().strokeBorder(theme.cardStroke, lineWidth: 1))
                             .transition(.opacity)
                     }
                     Text("\(Int(stats.cpuUsage.rounded()))%")
-                        .font(.system(size: 15, weight: .bold))
+                        .font(.system(size: 15, weight: .semibold))
                         .monospacedDigit()
                         .foregroundStyle(theme.textPrimary)
                         .contentTransition(.numericText())
                         .themeGlow(theme)
                 }
-                HStack(spacing: 18) {
+                HStack(spacing: 16) {
                     RingGauge(progress: stats.cpuUsage / 100, lineWidth: 10) {
                         VStack(spacing: 0) {
                             Image(systemName: "waveform.path.ecg")
@@ -45,7 +45,7 @@ struct CPUCard: View {
                     .frame(width: 64, height: 64)
 
                     // per-core mini bars
-                    HStack(alignment: .bottom, spacing: 3) {
+                    HStack(alignment: .bottom, spacing: 4) {
                         ForEach(stats.cpuCores.indices, id: \.self) { index in
                             Capsule()
                                 .fill(coreColor(stats.cpuCores[index]))
@@ -85,14 +85,14 @@ struct MemoryCard: View {
                     CardTitle(icon: "memorychip", title: "Memory")
                     Spacer()
                     Text("\(Int(stats.memoryUsage.rounded()))%")
-                        .font(.system(size: 14, weight: .bold))
+                        .font(.system(size: 13, weight: .semibold))
                         .monospacedDigit()
                         .foregroundStyle(theme.textPrimary)
                         .contentTransition(.numericText())
                 }
                 MeterBar(progress: stats.memoryUsage / 100)
                 Text("\(Format.bytes(stats.usedMemoryBytes)) of \(Format.bytes(stats.totalMemoryBytes))")
-                    .font(.system(size: 10.5))
+                    .font(.system(size: 11))
                     .foregroundStyle(theme.textTertiary)
             }
         }
@@ -117,15 +117,15 @@ struct BatteryCard: View {
                             tint: stats.isCharging ? .green : nil
                         )
                         Spacer()
-                        HStack(spacing: 3) {
+                        HStack(spacing: 4) {
                             if stats.isCharging {
                                 Image(systemName: "bolt.fill")
-                                    .font(.system(size: 11, weight: .bold))
+                                    .font(.system(size: 11, weight: .semibold))
                                     .foregroundStyle(.green)
                                     .repeatingPulse(performance.isOn(.microAnimations))
                             }
                             Text("\(percent)%")
-                                .font(.system(size: 14, weight: .bold))
+                                .font(.system(size: 13, weight: .semibold))
                                 .monospacedDigit()
                                 .foregroundStyle(theme.textPrimary)
                                 .contentTransition(.numericText())
@@ -136,7 +136,7 @@ struct BatteryCard: View {
                         colors: percent <= 20 ? [.red, .orange] : [.green, .mint]
                     )
                     Text(stats.isCharging ? "Charging" : "On battery")
-                        .font(.system(size: 10.5))
+                        .font(.system(size: 11))
                         .foregroundStyle(theme.textTertiary)
                 }
             }
@@ -163,7 +163,7 @@ struct NetworkCard: View {
     private func rateRow(symbol: String, value: Double, history: [Double], tint: Color) -> some View {
         HStack(spacing: 10) {
             Image(systemName: symbol)
-                .font(.system(size: 11, weight: .bold))
+                .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(tint)
                 .themeGlow(theme)
             Text(Format.rate(value))
@@ -190,7 +190,7 @@ struct DiskCard: View {
                     CardTitle(icon: "internaldrive", title: "Disk")
                     Spacer()
                     Text("\(Int(stats.diskUsedFraction * 100).clamped())%")
-                        .font(.system(size: 14, weight: .bold))
+                        .font(.system(size: 13, weight: .semibold))
                         .monospacedDigit()
                         .foregroundStyle(theme.textPrimary)
                         .contentTransition(.numericText())
@@ -200,7 +200,7 @@ struct DiskCard: View {
                     colors: stats.diskUsedFraction > 0.9 ? [.orange, .red] : [theme.accent, theme.accent2]
                 )
                 Text("\(Format.bytes(stats.diskFreeBytes)) free of \(Format.bytes(stats.diskTotalBytes))")
-                    .font(.system(size: 10.5))
+                    .font(.system(size: 11))
                     .foregroundStyle(theme.textTertiary)
             }
         }
@@ -228,7 +228,7 @@ struct UptimeChip: View {
                 .foregroundStyle(theme.textSecondary)
         }
         .padding(.horizontal, 12)
-        .padding(.vertical, 7)
+        .padding(.vertical, 8)
         .background(theme.cardFill, in: Capsule())
         .overlay(Capsule().strokeBorder(theme.cardStroke, lineWidth: 1))
     }
@@ -266,13 +266,7 @@ struct Sparkline: View {
             area.closeSubpath()
 
             let tint = color ?? theme.accent
-            context.fill(area, with: .linearGradient(
-                Gradient(colors: [tint.opacity(0.3), .clear]),
-                startPoint: CGPoint(x: 0, y: 0),
-                endPoint: CGPoint(x: 0, y: size.height)
-            ))
-            // soft glow pass, then the crisp line on top
-            context.stroke(line, with: .color(tint.opacity(0.25)), style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round))
+            context.fill(area, with: .color(tint.opacity(0.15)))
             context.stroke(line, with: .color(tint), style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round))
         }
         .frame(height: height)
@@ -382,10 +376,10 @@ struct ProcessesCard: View {
                 }
             } label: {
                 Text(armed ? "Sure?" : "Kill")
-                    .font(.system(size: 9.5, weight: .semibold))
+                    .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(armed ? .white : theme.textTertiary)
                     .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
+                    .padding(.vertical, 4)
                     .background(
                         armed ? Color.red.opacity(0.85) : theme.cardFill,
                         in: Capsule()
@@ -403,10 +397,14 @@ struct MeterBar: View {
     @Environment(\.theme) private var theme
     let progress: Double
     var colors: [Color]
+    /// Optional tween applied on progress changes (e.g. `.linear(duration: 1.05)`
+    /// under a 1 Hz TimelineView reads as one gliding bar). nil = instant jump.
+    var animation: Animation?
 
-    init(progress: Double, colors: [Color]? = nil) {
+    init(progress: Double, colors: [Color]? = nil, animation: Animation? = nil) {
         self.progress = progress
         self.colors = colors ?? []
+        self.animation = animation
     }
 
     var body: some View {
@@ -414,14 +412,9 @@ struct MeterBar: View {
             ZStack(alignment: .leading) {
                 Capsule().fill(theme.divider)
                 Capsule()
-                    .fill(
-                        LinearGradient(
-                            colors: colors.isEmpty ? [theme.accent, theme.accent2] : colors,
-                            startPoint: .leading, endPoint: .trailing
-                        )
-                    )
+                    .fill(colors.first ?? theme.accent)
                     .frame(width: geo.size.width * min(max(progress, 0), 1))
-                    .themeGlow(theme)
+                    .animation(animation, value: progress)
             }
         }
         .frame(height: 8)

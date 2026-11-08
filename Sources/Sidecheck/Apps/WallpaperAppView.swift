@@ -25,19 +25,19 @@ struct WallpaperAppView: View {
             VStack(alignment: .leading, spacing: 14) {
                 headerNote
 
-                sectionLabel("ANIMATED")
+                sectionLabel("Animated")
                 animatedCard
 
-                sectionLabel("SOLID COLOR")
+                sectionLabel("Solid color")
                 solidCard
 
-                sectionLabel("GRADIENTS")
+                sectionLabel("Gradients")
                 gradientCard
 
-                sectionLabel("PICTURE")
+                sectionLabel("Picture")
                 pictureCard
 
-                sectionLabel("VIDEO")
+                sectionLabel("Video")
                 videoCard
 
 
@@ -49,8 +49,7 @@ struct WallpaperAppView: View {
 
     private func sectionLabel(_ text: String) -> some View {
         Text(text)
-            .font(.system(size: 10.5, weight: .bold))
-            .tracking(1.2)
+            .font(.system(size: 11, weight: .semibold))
             .foregroundStyle(theme.textTertiary)
     }
 
@@ -66,10 +65,10 @@ struct WallpaperAppView: View {
             Spacer()
         }
         .padding(.horizontal, 12)
-        .padding(.vertical, 9)
-        .background(theme.cardFill, in: RoundedRectangle(cornerRadius: theme.cardRadius * 0.7, style: .continuous))
+        .padding(.vertical, 8)
+        .background(theme.cardFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: theme.cardRadius * 0.7, style: .continuous)
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .strokeBorder(theme.cardStroke, lineWidth: 1)
         )
     }
@@ -110,7 +109,7 @@ struct WallpaperAppView: View {
                 update { $0.kind = kind }
             }
         } label: {
-            VStack(spacing: 5) {
+            VStack(spacing: 4) {
                 RoundedRectangle(cornerRadius: 9, style: .continuous)
                     .fill(swatch())
                     .frame(height: 34)
@@ -302,7 +301,7 @@ struct WallpaperAppView: View {
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(.orange)
             Text("File is missing — showing the theme background until you pick a new one.")
-                .font(.system(size: 10.5))
+                .font(.system(size: 11))
                 .foregroundStyle(theme.textTertiary)
             Spacer()
             smallButton("Pick new") { pickMedia(images: spec.kind == .image) }
@@ -318,9 +317,9 @@ struct WallpaperAppView: View {
                 .foregroundStyle(theme.accent)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 8)
-                .background(theme.accent.opacity(0.12), in: RoundedRectangle(cornerRadius: theme.cardRadius * 0.7, style: .continuous))
+                .background(theme.accent.opacity(0.12), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                 .overlay(
-                    RoundedRectangle(cornerRadius: theme.cardRadius * 0.7, style: .continuous)
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
                         .strokeBorder(theme.accent.opacity(0.4), lineWidth: 1)
                 )
         }
@@ -332,9 +331,9 @@ struct WallpaperAppView: View {
             action()
         } label: {
             Text(title)
-                .font(.system(size: 10.5, weight: .semibold))
+                .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(theme.textSecondary)
-                .padding(.horizontal, 9)
+                .padding(.horizontal, 8)
                 .padding(.vertical, 4)
                 .background(theme.cardFill, in: Capsule())
                 .overlay(Capsule().strokeBorder(theme.cardStroke, lineWidth: 1))
@@ -461,7 +460,7 @@ struct CropEditorView: View {
                 Text("Drag to move · pinch or slide to zoom")
                     .font(.system(size: 9, weight: .medium))
                     .foregroundStyle(.white)
-                    .padding(.horizontal, 7)
+                    .padding(.horizontal, 8)
                     .padding(.vertical, 4)
                     .background(Color.black.opacity(0.45), in: Capsule())
                     .padding(6)

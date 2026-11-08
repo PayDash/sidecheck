@@ -20,7 +20,7 @@ struct ClipboardAppView: View {
 
             HStack(spacing: 8) {
                 Text("\(clipboard.items.count) item\(clipboard.items.count == 1 ? "" : "s")")
-                    .font(.system(size: 10.5))
+                    .font(.system(size: 11))
                     .monospacedDigit()
                     .foregroundStyle(theme.textTertiary)
                 Spacer()
@@ -45,7 +45,7 @@ struct ClipboardAppView: View {
                 emptyState
             } else if filtered.isEmpty {
                 Text("No copies match “\(query)”")
-                    .font(.system(size: 11.5))
+                    .font(.system(size: 12))
                     .foregroundStyle(theme.textTertiary)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
@@ -86,9 +86,9 @@ struct ClipboardAppView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(theme.cardFill, in: RoundedRectangle(cornerRadius: theme.cardRadius * 0.8, style: .continuous))
+        .background(theme.cardFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: theme.cardRadius * 0.8, style: .continuous)
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .strokeBorder(theme.cardStroke, lineWidth: 1)
         )
     }
@@ -103,7 +103,7 @@ struct ClipboardAppView: View {
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(theme.textSecondary)
             Text("Everything you copy lands here automatically")
-                .font(.system(size: 10.5))
+                .font(.system(size: 11))
                 .foregroundStyle(theme.textTertiary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -138,7 +138,7 @@ private struct ClipboardRow: View {
                     clipboard.remove(item)
                 } label: {
                     Image(systemName: "xmark")
-                        .font(.system(size: 9, weight: .bold))
+                        .font(.system(size: 9, weight: .semibold))
                         .foregroundStyle(theme.textSecondary)
                         .padding(6)
                         .background(Circle().fill(theme.cardFill))
@@ -161,14 +161,14 @@ private struct ClipboardRow: View {
                 .themeGlow(theme)
                 .frame(width: 16)
 
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(item.text)
-                    .font(.system(size: 11.5))
+                    .font(.system(size: 12))
                     .foregroundStyle(theme.textPrimary)
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
                 Text(item.date, format: .relative(presentation: .named))
-                    .font(.system(size: 9.5))
+                    .font(.system(size: 10))
                     .foregroundStyle(theme.textTertiary)
             }
             Spacer(minLength: 0)
@@ -181,13 +181,13 @@ private struct ClipboardRow: View {
             }
         }
         .padding(.horizontal, 12)
-        .padding(.vertical, 9)
+        .padding(.vertical, 8)
         .background(
-            RoundedRectangle(cornerRadius: theme.cardRadius * 0.8, style: .continuous)
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .fill(isFlashing ? theme.accent.opacity(0.14) : theme.cardFill)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: theme.cardRadius * 0.8, style: .continuous)
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .strokeBorder(isFlashing ? theme.accent.opacity(0.5) : theme.cardStroke, lineWidth: 1)
         )
         .animation(.spring(response: 0.3, dampingFraction: 0.8), value: isFlashing)

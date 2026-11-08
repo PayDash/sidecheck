@@ -186,7 +186,6 @@ struct PanelView: View {
                 )
         }
         .buttonStyle(.plain)
-        .symbolEffect(.bounce, value: controller.isPinned)
         .help(controller.isPinned ? "Unpin — auto-hide on leave" : "Pin — keep panel open")
     }
 
@@ -195,7 +194,7 @@ struct PanelView: View {
             .font(.system(size: 11, weight: .semibold, design: theme.fontDesign))
             .monospacedDigit()
             .foregroundStyle(theme.textSecondary)
-            .padding(.horizontal, 9)
+            .padding(.horizontal, 8)
             .padding(.vertical, 4)
             .background(theme.cardFill, in: Capsule())
             .overlay(Capsule().strokeBorder(theme.cardStroke, lineWidth: 1))
@@ -219,7 +218,7 @@ struct PanelView: View {
             withAnimation(.spring(response: 0.42, dampingFraction: 0.88)) { page = .home }
         } label: {
             Image(systemName: "chevron.backward")
-                .font(.system(size: 12, weight: .bold))
+                .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(theme.textSecondary)
                 .padding(6)
         }

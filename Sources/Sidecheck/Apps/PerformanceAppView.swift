@@ -13,19 +13,19 @@ struct PerformanceAppView: View {
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 14) {
-                sectionLabel("MODE")
+                sectionLabel("Mode")
                 modeCards
                 if performance.autoPower {
                     powerManagedNote
                 }
-                sectionLabel("FEATURES")
+                sectionLabel("Features")
                 featuresSection
-                sectionLabel("POWER")
+                sectionLabel("Power")
                 powerCard
-                sectionLabel("RIGHT NOW")
+                sectionLabel("Right now")
                 liveCard
                 Text("Estimates are for the current wallpaper (\(kindLabel)) while the panel is open. Hidden, Sidecheck idles at ≈0% regardless of mode — animated backgrounds pause themselves.")
-                    .font(.system(size: 9.5))
+                    .font(.system(size: 10))
                     .foregroundStyle(theme.textTertiary)
             }
             .padding(16)
@@ -34,8 +34,7 @@ struct PerformanceAppView: View {
 
     private func sectionLabel(_ text: String) -> some View {
         Text(text)
-            .font(.system(size: 10.5, weight: .bold))
-            .tracking(1.2)
+            .font(.system(size: 11, weight: .semibold))
             .foregroundStyle(theme.textTertiary)
     }
 
@@ -79,26 +78,26 @@ struct PerformanceAppView: View {
             ThemedCard {
                 HStack(spacing: 12) {
                     Image(systemName: "bolt.fill")
-                        .font(.system(size: 14, weight: .bold))
+                        .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(mode.tint)
                         .frame(width: 34, height: 34)
                         .background(mode.tint.opacity(0.14), in: Circle())
                         .themeGlow(theme)
-                    VStack(alignment: .leading, spacing: 3) {
+                    VStack(alignment: .leading, spacing: 4) {
                         Text(mode.label)
-                            .font(.system(size: 14, weight: .bold))
+                            .font(.system(size: 13, weight: .semibold))
                             .foregroundStyle(theme.textPrimary)
                         Text(mode.tagline)
-                            .font(.system(size: 10.5))
+                            .font(.system(size: 11))
                             .foregroundStyle(theme.textSecondary)
                         Text(mode.effectCaption)
-                            .font(.system(size: 9.5))
+                            .font(.system(size: 10))
                             .foregroundStyle(theme.textTertiary)
                     }
                     Spacer()
-                    VStack(alignment: .trailing, spacing: 3) {
+                    VStack(alignment: .trailing, spacing: 4) {
                         Text(cpu >= 1 ? "~\(Int(cpu))%" : String(format: "~%.1f%%", cpu))
-                            .font(.system(size: 13, weight: .bold))
+                            .font(.system(size: 13, weight: .semibold))
                             .monospacedDigit()
                             .foregroundStyle(selected ? mode.tint : theme.textSecondary)
                         Text("while open")
@@ -138,7 +137,7 @@ struct PerformanceAppView: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(theme.accent.opacity(0.08), in: RoundedRectangle(cornerRadius: theme.cardRadius * 0.7, style: .continuous))
+        .background(theme.accent.opacity(0.08), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 
     // MARK: Features
@@ -147,12 +146,12 @@ struct PerformanceAppView: View {
         let custom = performance.mode == .custom
         let estimate = PerformanceStore.estimate(features: performance.activeFeatures, kind: currentKind)
         return ThemedCard {
-            VStack(alignment: .leading, spacing: 11) {
+            VStack(alignment: .leading, spacing: 12) {
                 HStack {
                     CardTitle(icon: "switch.2", title: "Feature switches")
                     Spacer()
                     Text("~\(estimate >= 1 ? String(Int(estimate)) : String(format: "%.1f", estimate))% while open")
-                        .font(.system(size: 10.5, weight: .semibold))
+                        .font(.system(size: 11, weight: .semibold))
                         .monospacedDigit()
                         .foregroundStyle(custom ? theme.accent : theme.textTertiary)
                 }
@@ -161,7 +160,7 @@ struct PerformanceAppView: View {
                 }
                 if !custom {
                     Text("Switch to Custom to tune these.")
-                        .font(.system(size: 9.5))
+                        .font(.system(size: 10))
                         .foregroundStyle(theme.textTertiary)
                 }
             }
@@ -177,7 +176,7 @@ struct PerformanceAppView: View {
                     .foregroundStyle(customTuneable ? theme.textPrimary : theme.textSecondary)
                     .lineLimit(1)
                 Text(feature.costCaption(kind: currentKind))
-                    .font(.system(size: 9.5))
+                    .font(.system(size: 10))
                     .monospacedDigit()
                     .foregroundStyle(theme.textTertiary)
                     .lineLimit(1)
@@ -204,7 +203,7 @@ struct PerformanceAppView: View {
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Follow power")
-                            .font(.system(size: 12.5))
+                            .font(.system(size: 13))
                             .foregroundStyle(theme.textPrimary)
                         Text("Saver on battery · Pretty on power. Any manual change turns this off.")
                             .font(.system(size: 10))
@@ -229,8 +228,8 @@ struct PerformanceAppView: View {
                         .font(.system(size: 10, weight: .semibold))
                         .monospacedDigit()
                         .foregroundStyle(theme.textTertiary)
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 3)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
                         .background(theme.cardFill, in: Capsule())
                         .overlay(Capsule().strokeBorder(theme.cardStroke, lineWidth: 1))
                 }
@@ -243,7 +242,7 @@ struct PerformanceAppView: View {
                     }
                     if let baseline = perf.hiddenBaseline {
                         Text(String(format: "Hidden baseline: %.1f%% · %.0f wakeups/s", baseline.cpuPercent, baseline.idleWakeupsPerSec))
-                            .font(.system(size: 9.5))
+                            .font(.system(size: 10))
                             .monospacedDigit()
                             .foregroundStyle(theme.textTertiary)
                     }
@@ -257,7 +256,7 @@ struct PerformanceAppView: View {
     private func liveStat(_ label: String, _ value: String) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(label)
-                .font(.system(size: 9.5))
+                .font(.system(size: 10))
                 .tracking(0.6)
                 .foregroundStyle(theme.textTertiary)
             Text(value)
