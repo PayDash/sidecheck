@@ -574,9 +574,9 @@ struct MusicAppView: View {
             // 1 Hz ticks + a 1.05 s linear tween read as one gliding bar.
             MeterBar(progress: fraction, animation: .linear(duration: 1.05))
             HStack {
-                Text(Self.clock(current))
+                Text(Format.clock(current))
                 Spacer()
-                Text("-" + Self.clock(max(track.duration - current, 0)))
+                Text("-" + Format.clock(max(track.duration - current, 0)))
             }
             .font(.system(size: 10))
             .monospacedDigit()
@@ -691,15 +691,6 @@ struct MusicAppView: View {
         case ..<86_400: return "\(Int(interval / 3600))h ago"
         default: return "\(Int(interval / 86_400))d ago"
         }
-    }
-
-    private static func clock(_ seconds: Double) -> String {
-        let total = Int(seconds.rounded())
-        let hours = total / 3600
-        let minutes = (total % 3600) / 60
-        let secs = total % 60
-        if hours > 0 { return String(format: "%d:%02d:%02d", hours, minutes, secs) }
-        return String(format: "%d:%02d", minutes, secs)
     }
 }
 

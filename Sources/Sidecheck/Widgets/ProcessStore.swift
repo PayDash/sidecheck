@@ -36,6 +36,10 @@ final class ProcessStore: ObservableObject {
     private var previousCPU: [Int32: UInt64] = [:]
     private var previousAt: Date?
     private var timer: Timer?
+    /// A scan is on `scanQueue` right now — overlapping ticks skip instead of
+    /// racing two background scans' completions.
+    private var scanInFlight = false
+    private let scanQueue = DispatchQueue(label: "sidecheck.process-scan", qos: .utility)
 
     /// Performance features drive whether the scan runs at all (2 s / paused).
     /// Wired in PanelController.init.
@@ -66,24 +70,48 @@ final class ProcessStore: ObservableObject {
         fputs("[Sidecheck] processes: SIGTERM → \(sample.name) (pid \(sample.pid))\n", stderr)
     }
 
+    /// Main-thread tick: hands the expensive scan to the background queue and
+    /// publishes when it hops back.
     private func sample() {
-        guard isScanEnabled else { return } // paused by performance mode
+        guard isScanEnabled, !scanInFlight else { return } // paused by performance mode / scan still running
+        scanInFlight = true
+        let now = Date()
+        let previous = previousCPU
+        let previousAt = self.previousAt
+        scanQueue.async { [weak self] in
+            let core = ProcessStore.scanCore(previousCPU: previous, previousAt: previousAt, now: now)
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.scanInFlight = false
+                guard self.timer != nil else { return } // sampling stopped mid-scan
+                self.applyScan(cpuNow: core.cpuNow, memNow: core.memNow, cpuPercent: core.cpuPercent, at: core.finishedAt)
+            }
+        }
+    }
+
+    /// The expensive half — pid enumeration, per-pid rusage and per-thread
+    /// CPU times (thousands of calls on a busy machine) — runs on `scanQueue`.
+    /// Inputs and outputs are value-type copies; no MainActor state is touched.
+    private nonisolated static func scanCore(
+        previousCPU: [Int32: UInt64],
+        previousAt: Date?,
+        now: Date
+    ) -> (cpuNow: [Int32: UInt64], memNow: [Int32: UInt64], cpuPercent: [Int32: Double], finishedAt: Date) {
         let profile = ProcessInfo.processInfo.environment["SIDECHECK_SAMPLETIME"] == "1"
         let t0 = profile ? Date() : nil
         defer {
             if let t0 {
                 let ms = Date().timeIntervalSince(t0) * 1000
-                if ms > 25 { fputs("[Sidecheck] processes.sample: \(Int(ms)) ms\n", stderr) }
+                if ms > 25 { fputs("[Sidecheck] processes.scan: \(Int(ms)) ms\n", stderr) }
             }
         }
 
-        let now = Date()
         let requested = proc_listallpids(nil, 0)
-        guard requested > 0 else { return }
+        guard requested > 0 else { return ([Int32: UInt64](), [Int32: UInt64](), [Int32: Double](), Date()) }
         // Headroom for processes that appeared since the count call.
         var pids = [pid_t](repeating: 0, count: Int(requested) + 64)
         let count = proc_listallpids(&pids, Int32(pids.count * MemoryLayout<pid_t>.stride))
-        guard count > 0 else { return }
+        guard count > 0 else { return ([Int32: UInt64](), [Int32: UInt64](), [Int32: Double](), Date()) }
 
         let selfPID = ProcessInfo.processInfo.processIdentifier
         var cpuNow: [Int32: UInt64] = [:]
@@ -94,11 +122,10 @@ final class ProcessStore: ObservableObject {
         for index in 0..<Int(count) {
             let pid = pids[index]
             if pid <= 1 || pid == selfPID { continue }
-            guard let usage = Self.readUsage(pid: pid) else { continue } // exited / kernel
+            guard let usage = readUsage(pid: pid) else { continue } // exited / kernel
             cpuNow[pid] = usage.cpuNS
             memNow[pid] = usage.memBytes
         }
-
 
         var cpuPercent: [Int32: Double] = [:]
         if let previousAt, !previousCPU.isEmpty {
@@ -114,8 +141,18 @@ final class ProcessStore: ObservableObject {
                 }
             }
         }
+        return (cpuNow, memNow, cpuPercent, Date())
+    }
+
+    /// Publishes a finished background scan. Runs on the main actor.
+    private func applyScan(
+        cpuNow: [Int32: UInt64],
+        memNow: [Int32: UInt64],
+        cpuPercent: [Int32: Double],
+        at finishedAt: Date
+    ) {
         previousCPU = cpuNow
-        previousAt = now
+        previousAt = finishedAt
         // Drop names for pids that just disappeared — macOS recycles pids, so
         // a name keyed only by pid goes stale (and wrong next to Kill) if kept.
         names = names.filter { cpuNow[$0.key] != nil }
@@ -156,7 +193,7 @@ final class ProcessStore: ObservableObject {
     ///
     /// The rusage buffer is a plain void* the kernel writes the struct INTO —
     /// pass the struct's own address (PerfStore precedent).
-    private static func readUsage(pid: Int32) -> (cpuNS: UInt64, memBytes: UInt64)? {
+    private nonisolated static func readUsage(pid: Int32) -> (cpuNS: UInt64, memBytes: UInt64)? {
         var rinfo = rusage_info_v4()
         let rresult = withUnsafeMutableBytes(of: &rinfo) { raw -> Int32 in
             proc_pid_rusage(

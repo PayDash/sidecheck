@@ -65,15 +65,23 @@ final class ListeningStore: ObservableObject {
     @Published private(set) var history: [HeardTrack] = [] // lastHeard desc
 
     private var heard: [String: HeardTrack] = [:]
-    /// The track currently accumulating.
+    /// The track currently accumulating (kept whole — its duration caps the
+    /// session, including the gap slice credited when the session ends).
+    private var currentTrack: TrackInfo?
     private var currentKey: String?
     private var currentSessionSeconds: Double = 0
     private var lastNote: Date?
+    /// The player position as of the last note — a backwards jump starts a
+    /// fresh listen session (replay detection).
+    private var lastPosition: Double?
     private var dirty = false
     private var lastWrite = Date.distantPast
+    private let defaults: UserDefaults
 
-    init() {
-        let defaults = UserDefaults.standard
+    /// Injectable defaults so tests drive their own suite (the persisted
+    /// history lives under one key; tests must not touch the real one).
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
         if let data = defaults.data(forKey: Self.historyKey)
             ?? defaults.string(forKey: Self.historyKey)?.data(using: .utf8),
            let saved = try? JSONDecoder().decode([String: HeardTrack].self, from: data) {
@@ -85,13 +93,33 @@ final class ListeningStore: ObservableObject {
 
     // MARK: Accumulation (called by MusicStore on every poll)
 
-    func note(track: TrackInfo, isPlaying: Bool, at date: Date) {
+    /// Folds one poll into the history. A listen session ends on a track
+    /// change or a position rewind (replay, scrub back, player relaunch) —
+    /// the slice since the previous poll is credited to the session that
+    /// ENDED (that's where the time was spent), the ended session is
+    /// finalized (play count), and the new session starts at this poll.
+    func note(track: TrackInfo, isPlaying: Bool, position: Double, at date: Date) {
         let key = "\(track.player)|\(track.title)|\(track.artist)"
 
-        if key != currentKey {
+        let rewound: Bool
+        if isPlaying, key == currentKey, let last = lastPosition {
+            rewound = position < last - 1
+        } else {
+            rewound = false
+        }
+        let sessionEnded = key != currentKey || rewound
+
+        if sessionEnded {
+            if isPlaying, let last = lastNote, let endingKey = currentKey {
+                credit(min(date.timeIntervalSince(last), 30), capOf: currentTrack?.duration ?? 0, to: endingKey, at: date)
+            }
             finalizeCurrent(at: date)
+        }
+
+        if key != currentKey {
             writeHistory(force: true) // bound crash/SIGTERM loss to the current track
             currentKey = key
+            currentTrack = track
             currentSessionSeconds = 0
             var entry = heard[key] ?? HeardTrack(
                 key: key,
@@ -113,25 +141,30 @@ final class ListeningStore: ObservableObject {
             republishHistory()
         }
 
-        if isPlaying, let last = lastNote, key == currentKey {
-            let chunk = min(date.timeIntervalSince(last), 30)
-            if chunk > 0, var entry = heard[key] {
-                // Never credit more than 1.25× the track's own length.
-                let cap = max(track.duration * 1.25, 30)
-                let credited = min(chunk, max(0, cap - entry.seconds))
-                if credited > 0 {
-                    entry.seconds += credited
-                    currentSessionSeconds += credited
-                    entry.lastHeard = date
-                    heard[key] = entry
-                    dirty = true
-                }
-            }
+        if isPlaying, !sessionEnded, let last = lastNote {
+            credit(min(date.timeIntervalSince(last), 30), capOf: track.duration, to: key, at: date)
         }
+        lastPosition = position
         lastNote = date
         // Periodic durability: SIGTERM kills skip applicationWillTerminate,
         // so writes can't rely on quit — throttle to one encode per 30 s.
         writeHistory()
+    }
+
+    /// Credits seconds of listening to a session, capped at 1.25× its track's
+    /// own length per listen — bounds damage from a stalled player reporting
+    /// "playing". Session-scoped on purpose: repeat listens legitimately
+    /// exceed the length, and a rewind (session end) starts a fresh session.
+    private func credit(_ seconds: Double, capOf duration: Double, to key: String, at date: Date) {
+        guard seconds > 0, var entry = heard[key] else { return }
+        let cap = max(duration * 1.25, 30)
+        let credited = min(seconds, max(0, cap - currentSessionSeconds))
+        guard credited > 0 else { return }
+        entry.seconds += credited
+        currentSessionSeconds += credited
+        entry.lastHeard = date
+        heard[key] = entry
+        dirty = true
     }
 
     /// Called when the observed track changes: count a play if the session
@@ -226,23 +259,28 @@ final class ListeningStore: ObservableObject {
 
     private func writeHistory(force: Bool = false) {
         guard dirty else { return }
+        if force { prune() } // retention/cap hold while running, not just at launch
         guard force || Date().timeIntervalSince(lastWrite) >= 30 else { return }
         lastWrite = Date()
         dirty = false
         if let data = try? JSONEncoder().encode(heard) {
-            UserDefaults.standard.set(data, forKey: Self.historyKey)
+            defaults.set(data, forKey: Self.historyKey)
         }
     }
 
     private func prune() {
         let cutoff = Calendar.current.date(byAdding: .day, value: -Self.retentionDays, to: Date())
+        var changed = false
         for (key, entry) in heard where entry.lastHeard < cutoff ?? .distantPast {
             heard.removeValue(forKey: key)
+            changed = true
         }
         if heard.count > Self.capacity {
             let keep = Set(heard.values.sorted { $0.lastHeard > $1.lastHeard }.prefix(Self.capacity).map(\.key))
             heard = heard.filter { keep.contains($0.key) }
+            changed = true
         }
+        if changed { dirty = true } // a pruned-only change must still persist
     }
 
     private func republishHistory() {

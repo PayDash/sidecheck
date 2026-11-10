@@ -39,7 +39,6 @@ let statsFmDecoder: JSONDecoder = {
 final class StatsFmProvider: ObservableObject {
     static let usernameKey = "statsFmUsername"
     static let tokenKey = "statsFmToken"
-    private static let base = "https://api.stats.fm/api/v1"
 
     enum ProviderError: LocalizedError {
         case http(Int)
@@ -177,12 +176,26 @@ final class StatsFmProvider: ObservableObject {
 
     // MARK: Networking
 
-    private func get(_ path: String, query: [String: String], ttl: TimeInterval) async throws -> Data {
-        var components = URLComponents(string: Self.base + path)!
+    /// Builds the request URL from parts, not from a string: the username is
+    /// interpolated into the path, and `URLComponents(string:)` returns nil —
+    /// which used to crash the force-unwrap — for any character that's illegal
+    /// raw in a URL (a space, non-ASCII, …). The `.path` setter percent-encodes
+    /// those automatically.
+    nonisolated static func makeURL(path: String, query: [String: String]) -> URL? {
+        var components = URLComponents()
+        components.scheme = "https"
+        components.host = "api.stats.fm"
+        components.path = "/api/v1" + path
         if !query.isEmpty {
             components.queryItems = query.map { URLQueryItem(name: $0.key, value: $0.value) }
         }
-        let url = components.url!
+        return components.url
+    }
+
+    private func get(_ path: String, query: [String: String], ttl: TimeInterval) async throws -> Data {
+        guard let url = Self.makeURL(path: path, query: query) else {
+            throw ProviderError.badResponse
+        }
         let cacheKey = url.absoluteString
 
         if ttl > 0, let hit = cache[cacheKey], Date().timeIntervalSince(hit.stored) < ttl {

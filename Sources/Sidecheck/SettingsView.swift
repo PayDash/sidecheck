@@ -32,7 +32,7 @@ struct SettingsView: View {
                 sectionLabel("Diagnostics")
                 diagnosticsControls
 
-                Text("Sidecheck v0.13.0 — Tokens app (tokscale), Awake crash fix")
+                Text("Sidecheck v0.13.1 — audit fixes: stats.fm crash, repeat-listen counting, off-main process scan")
                     .font(.system(size: 10))
                     .foregroundStyle(theme.textTertiary)
                     .frame(maxWidth: .infinity, alignment: .center)

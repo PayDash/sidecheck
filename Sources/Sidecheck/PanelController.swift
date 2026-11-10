@@ -140,9 +140,10 @@ final class PanelController: ObservableObject {
         Config.showDwellDelay = showDwellDelay
         Config.hideDwellDelay = hideDwellDelay
 
-        // Every poll observation lands in the listening history.
-        music.onTrackObserved = { [weak listening] track, playing, at in
-            listening?.note(track: track, isPlaying: playing, at: at)
+        // Every poll observation lands in the listening history (position
+        // included — replay detection needs it).
+        music.onTrackObserved = { [weak listening] track, playing, position, at in
+            listening?.note(track: track, isPlaying: playing, position: position, at: at)
         }
 
         // Token scans run only while the panel is visible.

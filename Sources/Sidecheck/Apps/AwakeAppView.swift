@@ -98,7 +98,7 @@ struct AwakeAppView: View {
             RingGauge(progress: ringProgress(now: now, remaining: remaining), lineWidth: 7) {
                 VStack(spacing: 0) {
                     if let remaining {
-                        Text(Self.shortDuration(remaining))
+                        Text(Format.clock(remaining))
                             .font(.system(size: 11, weight: .semibold))
                             .monospacedDigit()
                             .foregroundStyle(theme.textPrimary)
@@ -258,14 +258,5 @@ struct AwakeAppView: View {
             RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .strokeBorder(Color.orange.opacity(0.35), lineWidth: 1)
         )
-    }
-
-    private static func shortDuration(_ interval: TimeInterval) -> String {
-        let total = Int(interval.rounded())
-        let hours = total / 3600
-        let minutes = (total % 3600) / 60
-        let seconds = total % 60
-        if hours > 0 { return String(format: "%d:%02d:%02d", hours, minutes, seconds) }
-        return String(format: "%d:%02d", minutes, seconds)
     }
 }

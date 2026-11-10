@@ -85,9 +85,11 @@ final class MusicStore: ObservableObject {
     /// Set from AppDelegate: whether the panel is visible. Drives the adaptive
     /// cadence — 3 s visible, 15 s hidden.
     var visibilityProvider: (() -> Bool)?
-    /// Fires on every poll with the current track; ListeningStore accumulates
-    /// listening history from it.
-    var onTrackObserved: ((TrackInfo, Bool, Date) -> Void)?
+    /// Fires on every poll with the current track, its player position and
+    /// the poll time; ListeningStore accumulates listening history from it.
+    /// Position is passed so repeats (a backwards position jump) can start a
+    /// fresh listen session.
+    var onTrackObserved: ((TrackInfo, Bool, Double, Date) -> Void)?
 
     var isPolling: Bool { timer != nil }
 
@@ -175,12 +177,12 @@ final class MusicStore: ObservableObject {
         }
 
         let parsed = OSAParser.parse(result.out)
-        apply(track: parsed.track, isPlaying: parsed.isPlaying)
+        apply(track: parsed.track, isPlaying: parsed.isPlaying, position: parsed.position)
         position = parsed.position
         positionDate = Date()
     }
 
-    private func apply(track newTrack: TrackInfo?, isPlaying newIsPlaying: Bool) {
+    private func apply(track newTrack: TrackInfo?, isPlaying newIsPlaying: Bool, position newPosition: Double) {
         let key = newTrack.map { "\($0.player)|\($0.title)|\($0.artist)" }
         if key != trackKey {
             trackKey = key
@@ -195,7 +197,7 @@ final class MusicStore: ObservableObject {
             isPlaying = newIsPlaying
         }
         if let current = track {
-            onTrackObserved?(current, isPlaying, Date())
+            onTrackObserved?(current, isPlaying, newPosition, Date())
         }
     }
 
@@ -244,6 +246,10 @@ final class MusicStore: ObservableObject {
     /// permission just skips that row. Fields join with ASCII 31 (unit
     /// separator) — see OSAParser; a tab inside track metadata can't
     /// break the row.
+    ///
+    /// Spotify's AppleScript duration is always milliseconds; the >10000
+    /// check normalizes it while still passing seconds through untouched if a
+    /// Spotify build ever switches units (a 3-min track is 180 s vs 180000 ms).
     nonisolated private static let queryScript = """
     set SEP to (ASCII character 31)
     set output to ""
@@ -252,7 +258,7 @@ final class MusicStore: ObservableObject {
     		tell application "Spotify"
     			if player state is playing or player state is paused then
     				set tDur to duration of current track
-    				if tDur > 50000 then set tDur to tDur / 1000
+    				if tDur > 10000 then set tDur to tDur / 1000
     				set output to output & "Spotify" & SEP & (player state is playing) & SEP & (name of current track) & SEP & (artist of current track) & SEP & (album of current track) & SEP & tDur & SEP & (player position) & SEP & (artwork url of current track) & linefeed
     			end if
     		end tell

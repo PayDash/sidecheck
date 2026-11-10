@@ -524,7 +524,7 @@ struct AwakeHomeWidget: View {
                 RingGauge(progress: ringProgress(remaining: remaining, now: contextDate), lineWidth: 6) {
                     Group {
                         if let remaining {
-                            Text(Self.shortDuration(remaining))
+                            Text(Format.clock(remaining))
                                 .font(.system(size: 9, weight: .semibold))
                                 .monospacedDigit()
                                 .foregroundStyle(theme.textPrimary)
@@ -571,15 +571,6 @@ struct AwakeHomeWidget: View {
             return "until " + endDate.formatted(date: .omitted, time: .shortened)
         }
         return "until stopped"
-    }
-
-    private static func shortDuration(_ interval: TimeInterval) -> String {
-        let total = Int(interval.rounded())
-        let hours = total / 3600
-        let minutes = (total % 3600) / 60
-        let seconds = total % 60
-        if hours > 0 { return String(format: "%d:%02d:%02d", hours, minutes, seconds) }
-        return String(format: "%d:%02d", minutes, seconds)
     }
 }
 

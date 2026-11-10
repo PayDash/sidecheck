@@ -597,10 +597,23 @@ final class TokscaleStore: ObservableObject {
     private var timer: Timer?
     private var queue = DispatchQueue(label: "sidecheck.tokscale", qos: .utility)
     private var scanInFlight = false
+    /// Set when a scan request lands while another is in flight (range tap,
+    /// Rescan button) — the completion re-scans with the then-current range,
+    /// instead of the request silently vanishing for up to a minute.
+    private var pendingRescan = false
     private var scanGeneration = 0
     private var memo: [TokenRange: TokenSnapshot] = [:]
 
     static let scanInterval: TimeInterval = 60
+
+    /// "yyyy-MM-dd" for slicing today's tokens out of the daily trend —
+    /// built once, not per view-body evaluation.
+    private static let todayKeyFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        return formatter
+    }()
 
     var isScanning: Bool { state == .scanning }
 
@@ -609,10 +622,7 @@ final class TokscaleStore: ObservableObject {
     /// nil only before the first successful scan.
     var todaySummary: (tokens: Int, cacheHitRate: Double?)? {
         guard let snapshot = snapshot else { return nil }
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        let key = formatter.string(from: Date())
+        let key = Self.todayKeyFormatter.string(from: Date())
         if let today = snapshot.daily.last(where: { $0.date == key }) {
             let prompt = today.input + today.cacheRead + today.cacheWrite
             let rate = prompt > 0 ? Double(today.cacheRead) / Double(prompt) : nil
@@ -653,7 +663,10 @@ final class TokscaleStore: ObservableObject {
     // MARK: Scanning
 
     private func scan() {
-        guard !scanInFlight else { return }
+        guard !scanInFlight else {
+            pendingRescan = true // this scan request leads once the current one lands
+            return
+        }
         scanInFlight = true
         state = .scanning
         scanGeneration += 1
@@ -674,6 +687,10 @@ final class TokscaleStore: ObservableObject {
                     self.lastScanDate = snapshot.scannedAt
                 case .failure(let message):
                     self.state = .failed(message)
+                }
+                if self.pendingRescan {
+                    self.pendingRescan = false
+                    self.scan() // runs with the current range
                 }
             }
         }

@@ -34,4 +34,11 @@ final class FormatTests: XCTestCase {
         XCTAssertTrue(Format.bytes(1_048_576).contains("MB"))
         XCTAssertTrue(Format.bytes(5_368_709_120).contains("GB"))
     }
+
+    func testClock() {
+        XCTAssertEqual(Format.clock(0), "0:00")
+        XCTAssertEqual(Format.clock(59.7), "1:00") // rounds to the nearest second
+        XCTAssertEqual(Format.clock(222), "3:42")
+        XCTAssertEqual(Format.clock(3723), "1:02:03")
+    }
 }
