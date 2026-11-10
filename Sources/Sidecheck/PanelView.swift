@@ -16,6 +16,7 @@ struct PanelView: View {
     @ObservedObject var listening: ListeningStore
     @ObservedObject var statsFm: StatsFmProvider
     @ObservedObject var performance: PerformanceStore
+    @ObservedObject var tokscale: TokscaleStore
 
     private var theme: ThemeSpec { themes.current.spec }
 
@@ -75,6 +76,7 @@ struct PanelView: View {
         .environmentObject(controller.listening)
         .environmentObject(controller.statsFm)
         .environmentObject(controller.performance)
+        .environmentObject(controller.tokscale)
         .environmentObject(controller.perf)
         // entrance choreography: content springs in while the window appears
         .opacity(controller.isVisible ? 1 : 0)

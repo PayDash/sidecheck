@@ -56,6 +56,7 @@ final class PanelController: ObservableObject {
     let listening = ListeningStore()
     let statsFm = StatsFmProvider()
     let performance = PerformanceStore()
+    let tokscale = TokscaleStore()
     let perf = PerfStore()
     let edgeTracker = EdgeTracker()
 
@@ -144,6 +145,11 @@ final class PanelController: ObservableObject {
             listening?.note(track: track, isPlaying: playing, at: at)
         }
 
+        // Token scans run only while the panel is visible.
+        tokscale.visibilityProvider = { [weak self] in
+            self?.isVisible ?? false
+        }
+
         // Performance features drive the stores' cadences (the integration
         // template — one closure per store that wants to react).
         statsStore.featuresProvider = { [weak performance] in performance?.activeFeatures ?? PerformanceMode.pretty.features() }
@@ -173,7 +179,7 @@ final class PanelController: ObservableObject {
     /// initialized and can be captured by the SwiftUI root view.
     func attachPanel() {
         let hostingView = NSHostingView(
-            rootView: PanelView(controller: self, stats: statsStore, themes: themeStore, home: homeStore, wallpaper: wallpaper, awake: awake, screenTime: screenTime, processes: processes, music: music, listening: listening, statsFm: statsFm, performance: performance)
+            rootView: PanelView(controller: self, stats: statsStore, themes: themeStore, home: homeStore, wallpaper: wallpaper, awake: awake, screenTime: screenTime, processes: processes, music: music, listening: listening, statsFm: statsFm, performance: performance, tokscale: tokscale)
         )
         // The window is the single sizing authority (edge-anchored, centered).
         // Without this, the hosting view pushes its SwiftUI ideal size into
@@ -231,6 +237,7 @@ final class PanelController: ObservableObject {
         statsStore.startSampling()
         processes.startSampling()
         music.startPolling() // idempotent — polling runs app-lifetime now
+        tokscale.scanIfStale() // fresh numbers on every hover-open
 
         if !performance.isOn(.panelMovement) {
             // Saver: no slide/zoom — the panel is simply there.

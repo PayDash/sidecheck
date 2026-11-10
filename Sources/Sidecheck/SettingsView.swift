@@ -32,7 +32,7 @@ struct SettingsView: View {
                 sectionLabel("Diagnostics")
                 diagnosticsControls
 
-                Text("Sidecheck v0.12.0 — UI polish, equal-height slots, theme template")
+                Text("Sidecheck v0.13.0 — Tokens app (tokscale), Awake crash fix")
                     .font(.system(size: 10))
                     .foregroundStyle(theme.textTertiary)
                     .frame(maxWidth: .infinity, alignment: .center)
@@ -373,6 +373,9 @@ struct SettingsView: View {
                 healthRow("Music",
                           controller.music.isPolling ? "Recording plays" : "Off",
                           ok: controller.music.isPolling)
+                healthRow("Token scanner",
+                          controller.tokscale.state.healthText,
+                          ok: controller.tokscale.state.isHealthy)
                 healthRow("Battery alerts",
                           controller.alerter.isEnabled ? "On — 20% / 10%" : "Off",
                           ok: true)

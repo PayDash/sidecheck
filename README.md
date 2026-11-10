@@ -15,6 +15,7 @@ The panel is a tiny launcher/OS:
   - **Awake** — keep the Mac awake via `/usr/bin/caffeinate`: 1h / 2h / 4h / ∞ or a custom duration, countdown ring + optional home widget, "keep display awake" toggle. Lid closure survives on **AC power** (macOS blocks clamshell on battery — the app warns); sessions stop when Sidecheck quits
   - **Wallpaper** — per-theme backgrounds: the theme's animated look, any other theme's animated style, solid colors, gradient presets (+ angle), **pictures and videos with a pan/zoom crop editor** (drag + pinch/slider) so oversized media can be positioned exactly; videos loop muted (sound toggle) and pause while the panel is hidden; "apply to all themes" for one look everywhere
   - **Settings** — everything below
+  - **Tokens** — AI token usage from [tokscale](https://github.com/junhoyeo/tokscale): per-model/session/project breakdowns, **cache hit rate**, daily trend, cost estimates (secondary); scans run while the panel is open via the tokscale CLI (PATH → bunx → npx, with a TUI-cache fallback)
   - **Battery / Network / Disk** — focused detail views with big sparklines
 - **Home widgets** — any app's compact widget can sit on the home screen, so the data you care about is visible the instant the panel opens. Bindings persist.
 
@@ -95,7 +96,8 @@ cp -R build/Sidecheck.app /Applications/   # to install
 - `Apps/MusicStore.swift` — Spotify/Music now-playing via osascript (MediaRemote info is entitlement-blocked since macOS 15.4); app-lifetime adaptive poll (3 s visible / 15 s hidden / skipped when no player runs), client-side position interpolation, per-track artwork cache
 - `Apps/ListeningStats.swift` + `ListeningStore.swift` — provider protocol for listening stats; local history accumulates from every poll (background, persisted `"listeningHistory"`, flush throttled 30 s + on track change because SIGTERM skips `applicationWillTerminate`), favorites, "This Mac" provider
 - `Apps/StatsFmProvider.swift` — optional stats.fm backend (username + optional personal token, nothing hardcoded); public `streams/recent` + `top/*` endpoints, lowercase range values, TTL cache, ISO-fractional date decoding
-- Home screen slot count 1 = one full-width widget slot; Monitor/Screen Time/Music have wide variants (`WidgetKind.wideWidget`)
+- `Apps/TokscaleStore.swift` — shells out to [tokscale](https://github.com/junhoyeo/tokscale) (`models --json --group-by …` for sessions/projects/models, `graph --output` for the all-time daily trend); resolution chain PATH → bunx → npx → TUI-cache fallback; scans run on a background queue, gated to panel-visible (on open + 60 s); no persistence — tokscale owns the data
+- Home screen slot count 1 = one full-width widget slot; Monitor/Screen Time/Tokens/Music have wide variants (`WidgetKind.wideWidget`)
 - Panel settings persist: `themeID`, `panelScale`, `panelAnimationStyle`, `panelAnimationSpeed`, `homeSlotCount`, `homeWidgetSlots`, `wallpaperSpecs`, `hotZoneWidth`, `hotZoneSpan`, `showDwellDelay`, `hideDwellDelay`, `lowBatteryAlertsEnabled`, `clipboardItems`, `screenTimeDays`, `screenTimeEnabled`, `screenTimeIdleMinutes`, `awakeKeepsDisplay`, `awakePID`
 
 ## Dev/test hooks
@@ -116,4 +118,4 @@ SIDECHECK_AUTOSHOW=1 SIDECHECK_OPENAPP=settings .build/release/Sidecheck
 - [ ] Global hotkey to toggle the panel
 
 ---
-*v0.12.0 — UI polish pass (solid accent chrome, type scale, sentence-case labels, 4-grid spacing, one micro-spring), equal-height widget slots, edit mode with full widget content + rebind button, long-press fix, gliding music progress, theme template readiness (spec tokens + tests + "Adding a theme" checklist). Still built by an agent and its human.* ⚡
+*v0.13.0 — new Tokens app (tokscale: sessions/projects/models + cache hit rate, visible-gated scans with CLI→cache fallback), Awake stop/restart crash fix (Foundation terminationHandler fires off-main — assumeIsolated traps; Task { @MainActor } instead, same fix in BatteryAlerter). Still built by an agent and its human.* ⚡

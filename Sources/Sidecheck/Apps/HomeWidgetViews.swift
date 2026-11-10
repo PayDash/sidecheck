@@ -984,7 +984,7 @@ struct PerformanceHomeWidget: View {
                 .frame(width: 30, height: 30)
                 .background(Circle().fill(performance.mode.tint))
                 .themeGlow(theme)
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 3) {
                 Text(performance.mode.label)
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(theme.textPrimary)
@@ -996,6 +996,106 @@ struct PerformanceHomeWidget: View {
                     .lineLimit(1)
             }
             Spacer()
+        }
+    }
+}
+
+// MARK: - Tokens
+
+struct TokenHomeWidget: View {
+    @Environment(\.theme) private var theme
+    @EnvironmentObject var tokscale: TokscaleStore
+
+    var body: some View {
+        if let today = tokscale.todaySummary {
+            HStack(spacing: 12) {
+                Image(systemName: "textformat.123")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(theme.accent)
+                    .frame(width: 30, height: 30)
+                    .background(theme.accent.opacity(0.14), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(Format.compactCount(today.tokens))
+                        .font(.system(size: 13, weight: .bold, design: .monospaced))
+                        .monospacedDigit()
+                        .foregroundStyle(theme.textPrimary)
+                        .contentTransition(.numericText())
+                    // Single caption line — a half-width slot can't fit a
+                    // trailing cache column without truncating everything.
+                    Text(today.cacheHitRate.map { String(format: "%.0f%% cache hit", $0 * 100) } ?? "tokens today")
+                        .font(.system(size: 9.5))
+                        .monospacedDigit()
+                        .foregroundStyle(theme.textTertiary)
+                        .lineLimit(1)
+                }
+            }
+        } else {
+            HStack(spacing: 10) {
+                Image(systemName: "textformat.123")
+                    .font(.system(size: 14))
+                    .foregroundStyle(theme.textTertiary)
+                Text("Install tokscale for token usage")
+                    .font(.system(size: 11))
+                    .foregroundStyle(theme.textTertiary)
+                Spacer()
+            }
+        }
+    }
+}
+
+struct TokenWideWidget: View {
+    @Environment(\.theme) private var theme
+    @EnvironmentObject var tokscale: TokscaleStore
+
+    var body: some View {
+        if let today = tokscale.todaySummary, let snapshot = tokscale.snapshot {
+            HStack(spacing: 14) {
+                Image(systemName: "textformat.123")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(theme.accent)
+                    .frame(width: 34, height: 34)
+                    .background(theme.accent.opacity(0.14), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(Format.compactCount(today.tokens))
+                        .font(.system(size: 14, weight: .bold, design: .monospaced))
+                        .monospacedDigit()
+                        .foregroundStyle(theme.textPrimary)
+                        .contentTransition(.numericText())
+                    Text("tokens today")
+                        .font(.system(size: 9.5))
+                        .foregroundStyle(theme.textTertiary)
+                }
+                Spacer()
+                VStack(alignment: .trailing, spacing: 5) {
+                    if let rate = today.cacheHitRate {
+                        Text(String(format: "%.0f%% cache hit", rate * 100))
+                            .font(.system(size: 10, weight: .semibold))
+                            .monospacedDigit()
+                            .foregroundStyle(theme.textSecondary)
+                            .contentTransition(.numericText())
+                        MeterBar(progress: rate)
+                            .frame(width: 90)
+                    }
+                    if let topModel = snapshot.topModel {
+                        Text("top · \(topModel)")
+                            .font(.system(size: 9.5))
+                            .foregroundStyle(theme.textTertiary)
+                            .lineLimit(1)
+                    }
+                }
+                MiniBars(values: snapshot.daily.suffix(7).map { Double($0.tokens) })
+                    .frame(width: 150, height: 34)
+            }
+        } else {
+            HStack(spacing: 10) {
+                Image(systemName: "textformat.123")
+                    .font(.system(size: 14))
+                    .foregroundStyle(theme.textTertiary)
+                Text("Install tokscale for token usage")
+                    .font(.system(size: 11))
+                    .foregroundStyle(theme.textTertiary)
+                Spacer()
+            }
         }
     }
 }

@@ -74,7 +74,9 @@ final class BatteryAlerter: ObservableObject {
             return
         }
         center.requestAuthorization(options: [.alert, .sound]) { [weak self] granted, _ in
-            MainActor.assumeIsolated {
+            // UN authorization callbacks arrive off-main — hop with a Task
+            // (assumeIsolated would trap on the callback's queue).
+            Task { @MainActor [weak self] in
                 guard let self else { return }
                 if granted {
                     self.start()

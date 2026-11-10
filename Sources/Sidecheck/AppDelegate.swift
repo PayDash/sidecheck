@@ -72,6 +72,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             self?.panelController.isVisible ?? false
         }
         panelController.music.startPolling()
+        // Token usage scans only while the panel is visible (60 s cadence).
+        panelController.tokscale.startPolling()
         // Dev/test hook: SIDECHECK_AWAKE=<seconds> starts an Awake session at
         // launch (0 = infinite).
         if let raw = ProcessInfo.processInfo.environment["SIDECHECK_AWAKE"],

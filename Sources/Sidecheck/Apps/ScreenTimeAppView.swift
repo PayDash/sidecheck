@@ -464,8 +464,8 @@ struct ScreenTimeAppView: View {
 
 /// Theme-aware Canvas bar chart (no Swift Charts — matches the Sparkline/
 /// MeterBar approach). Bars are rounded capsules with an accent gradient;
-/// tapping selects the bar under the pointer.
-private struct BarChart: View {
+/// tapping selects the bar under the pointer. Shared with the Tokens app.
+struct BarChart: View {
     @Environment(\.theme) private var theme
     let values: [Double]
     /// One optional x-axis label per bar (nil = skip).

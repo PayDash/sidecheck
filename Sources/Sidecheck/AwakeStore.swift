@@ -82,8 +82,11 @@ final class AwakeStore: ObservableObject {
             arguments += ["-t", String(Int(duration.rounded()))]
         }
         process.arguments = arguments
+        // The termination handler fires on a Foundation background thread —
+        // hop to the main actor with a Task (MainActor.assumeIsolated traps
+        // off-main, which killed the app on every stop/restart).
         process.terminationHandler = { [weak self] process in
-            MainActor.assumeIsolated {
+            Task { @MainActor [weak self] in
                 guard let self, self.process === process else { return } // replaced or already stopped
                 self.process = nil
                 self.isActive = false

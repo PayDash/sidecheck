@@ -8,6 +8,7 @@ enum AppID: String, CaseIterable, Identifiable {
     case wallpaper
     case awake
     case screenTime
+    case tokens
     case music
     case performance
     case settings
@@ -27,6 +28,7 @@ enum WidgetKind: String, CaseIterable, Identifiable {
     case wallpaper
     case awake
     case screenTime
+    case tokens
     case music
     case performance
     case settings
@@ -40,6 +42,7 @@ enum WidgetKind: String, CaseIterable, Identifiable {
         case .wallpaper: .wallpaper
         case .awake: .awake
         case .screenTime: .screenTime
+        case .tokens: .tokens
         case .music: .music
         case .performance: .performance
         case .settings: .settings
@@ -57,6 +60,7 @@ enum WidgetKind: String, CaseIterable, Identifiable {
         case .wallpaper: "Wallpaper"
         case .awake: "Awake"
         case .screenTime: "Screen Time"
+        case .tokens: "Tokens"
         case .music: "Music"
         case .performance: "Performance"
         case .settings: "Settings"
@@ -74,6 +78,7 @@ enum WidgetKind: String, CaseIterable, Identifiable {
         case .wallpaper: "paintpalette.fill"
         case .awake: "cup.and.saucer.fill"
         case .screenTime: "hourglass"
+        case .tokens: "textformat.123"
         case .music: "music.note"
         case .performance: "bolt.fill"
         case .settings: "gearshape.fill"
@@ -91,6 +96,7 @@ enum WidgetKind: String, CaseIterable, Identifiable {
         case .wallpaper: .teal
         case .awake: .orange
         case .screenTime: .indigo
+        case .tokens: .cyan
         case .music: .red
         case .performance: .yellow
         case .settings: .gray
@@ -110,6 +116,7 @@ enum WidgetKind: String, CaseIterable, Identifiable {
         case .wallpaper: WallpaperHomeWidget()
         case .awake: AwakeHomeWidget()
         case .screenTime: ScreenTimeHomeWidget()
+        case .tokens: TokenHomeWidget()
         case .music: MusicHomeWidget()
         case .performance: PerformanceHomeWidget()
         case .settings: SettingsHomeWidget()
@@ -122,6 +129,7 @@ enum WidgetKind: String, CaseIterable, Identifiable {
         switch self {
         case .monitor: MonitorWideWidget()
         case .screenTime: ScreenTimeWideWidget()
+        case .tokens: TokenWideWidget()
         case .music: MusicWideWidget()
         default: homeWidget
         }
@@ -140,6 +148,7 @@ struct PanelApp: Identifiable {
         .wallpaper: PanelApp(id: .wallpaper, name: "Wallpaper", symbol: "paintpalette.fill", tint: .teal),
         .awake: PanelApp(id: .awake, name: "Awake", symbol: "cup.and.saucer.fill", tint: .orange),
         .screenTime: PanelApp(id: .screenTime, name: "Screen Time", symbol: "hourglass", tint: .indigo),
+        .tokens: PanelApp(id: .tokens, name: "Tokens", symbol: "textformat.123", tint: .cyan),
         .music: PanelApp(id: .music, name: "Music", symbol: "music.note", tint: .red),
         .performance: PanelApp(id: .performance, name: "Performance", symbol: "bolt.fill", tint: .yellow),
         .settings: PanelApp(id: .settings, name: "Settings", symbol: "gearshape.fill", tint: .gray),
@@ -158,6 +167,7 @@ extension AppID {
         case .wallpaper: WallpaperAppView()
         case .awake: AwakeAppView()
         case .screenTime: ScreenTimeAppView()
+        case .tokens: TokenAppView()
         case .music: MusicAppView()
         case .performance: PerformanceAppView()
         case .settings: SettingsAppView()

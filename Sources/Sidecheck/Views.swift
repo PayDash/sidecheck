@@ -212,6 +212,22 @@ enum Format {
         if hours > 0 { return "\(hours)h \(String(format: "%02d", minutes))m" }
         return "\(minutes)m"
     }
+
+    /// "987", "314K", "1.86M", "7.73B" — token-count formatting.
+    static func compactCount(_ value: Int) -> String {
+        let double = Double(value)
+        switch abs(value) {
+        case 0..<1_000: return "\(value)"
+        case 1_000..<1_000_000: return String(format: "%.1fK", double / 1_000)
+        case 1_000_000..<1_000_000_000: return String(format: "%.2fM", double / 1_000_000)
+        default: return String(format: "%.2fB", double / 1_000_000_000)
+        }
+    }
+
+    /// "$55.12" / "$0.03" — tokscale cost estimates.
+    static func dollars(_ value: Double) -> String {
+        String(format: "$%.2f", value)
+    }
 }
 
 // MARK: - SwiftUI-native panel controls
