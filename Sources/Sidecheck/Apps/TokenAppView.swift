@@ -77,24 +77,91 @@ struct TokenAppView: View {
 
     @ViewBuilder
     private var content: some View {
-        if let snapshot = tokscale.snapshot {
+        // The snapshot is only shown when it belongs to the ACTIVE range —
+        // otherwise a range switch would keep silently displaying the
+        // previous range's numbers while the scan runs. Anything else gets
+        // the skeleton.
+        if let snapshot = tokscale.snapshot, snapshot.range == tokscale.range {
             heroCard(snapshot)
             if snapshot.daily.count >= 2 {
                 chartCard(snapshot)
             }
-            if !snapshot.models.isEmpty {
-                modelsCard(snapshot)
+            if snapshot.totalTokens == 0 {
+                placeholderCard("No usage recorded for this range yet.")
+            } else {
+                if !snapshot.models.isEmpty {
+                    modelsCard(snapshot)
+                }
+                if !snapshot.sessions.isEmpty {
+                    sessionsCard(snapshot)
+                }
+                if !snapshot.projects.isEmpty {
+                    projectsCard(snapshot)
+                }
             }
-            if !snapshot.sessions.isEmpty {
-                sessionsCard(snapshot)
-            }
-            if !snapshot.projects.isEmpty {
-                projectsCard(snapshot)
-            }
-        } else if tokscale.state == .scanning {
-            placeholderCard("Scanning tokscale sessions…")
         } else {
-            placeholderCard("No usage recorded for this range yet.")
+            // Covers the first scan, range switches, and any refresh —
+            // the .failed/.notInstalled states are routed in body.
+            skeleton
+        }
+    }
+
+    // MARK: Skeleton
+
+    /// Placeholder cards shown while a scan runs (first load and range
+    /// switches — the three tokscale invocations take a couple of seconds).
+    /// Opacity-pulse only: compositor-safe, and transient by design.
+    private var skeleton: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            ThemedCard {
+                VStack(alignment: .leading, spacing: 12) {
+                    SkeletonBar(width: 130, height: 26)
+                    SkeletonBar(width: 190, height: 11)
+                    SkeletonBar(width: nil, height: 8)
+                    SkeletonBar(width: 150, height: 11)
+                }
+            }
+            ThemedCard {
+                VStack(alignment: .leading, spacing: 12) {
+                    SkeletonBar(width: 90, height: 11)
+                    HStack(alignment: .bottom, spacing: 8) {
+                        SkeletonBar(width: 26, height: 70)
+                        SkeletonBar(width: 26, height: 46)
+                        SkeletonBar(width: 26, height: 88)
+                        SkeletonBar(width: 26, height: 34)
+                        SkeletonBar(width: 26, height: 60)
+                    }
+                }
+            }
+            ThemedCard {
+                VStack(alignment: .leading, spacing: 14) {
+                    SkeletonBar(width: 110, height: 11)
+                    SkeletonBar(width: nil, height: 11)
+                    SkeletonBar(width: nil, height: 11)
+                    SkeletonBar(width: nil, height: 11)
+                }
+            }
+        }
+    }
+
+    private struct SkeletonBar: View {
+        @Environment(\.theme) private var theme
+        @Environment(\.accessibilityReduceMotion) private var reduceMotion
+        let width: CGFloat?
+        let height: CGFloat
+        @State private var pulsing = false
+
+        var body: some View {
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .fill(theme.divider)
+                .frame(width: width, height: height)
+                .frame(maxWidth: width == nil ? .infinity : nil, alignment: .leading)
+                .opacity(pulsing ? 0.35 : 1)
+                .animation(
+                    reduceMotion ? nil : .easeInOut(duration: 0.8).repeatForever(autoreverses: true),
+                    value: pulsing
+                )
+                .onAppear { pulsing = !reduceMotion }
         }
     }
 
@@ -226,7 +293,7 @@ struct TokenAppView: View {
         }
         let step = max(days.count / 6, 1)
         let labels: [String?] = days.enumerated().map { index, day in
-            index % step == 0 || index == days.count - 1 ? Self.shortDate(day.date) : nil
+            index % step == 0 ? Self.shortDate(day.date) : nil
         }
         BarChart(values: values, labels: labels) { _ in
             // Day drill-down would need a per-day group-by rescan — the

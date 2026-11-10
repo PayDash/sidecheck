@@ -78,7 +78,7 @@ enum WidgetKind: String, CaseIterable, Identifiable {
         case .wallpaper: "paintpalette.fill"
         case .awake: "cup.and.saucer.fill"
         case .screenTime: "hourglass"
-        case .tokens: "textformat.123"
+        case .tokens: "flame.fill"
         case .music: "music.note"
         case .performance: "bolt.fill"
         case .settings: "gearshape.fill"
@@ -148,7 +148,7 @@ struct PanelApp: Identifiable {
         .wallpaper: PanelApp(id: .wallpaper, name: "Wallpaper", symbol: "paintpalette.fill", tint: .teal),
         .awake: PanelApp(id: .awake, name: "Awake", symbol: "cup.and.saucer.fill", tint: .orange),
         .screenTime: PanelApp(id: .screenTime, name: "Screen Time", symbol: "hourglass", tint: .indigo),
-        .tokens: PanelApp(id: .tokens, name: "Tokens", symbol: "textformat.123", tint: .cyan),
+        .tokens: PanelApp(id: .tokens, name: "Tokens", symbol: "flame.fill", tint: .cyan),
         .music: PanelApp(id: .music, name: "Music", symbol: "music.note", tint: .red),
         .performance: PanelApp(id: .performance, name: "Performance", symbol: "bolt.fill", tint: .yellow),
         .settings: PanelApp(id: .settings, name: "Settings", symbol: "gearshape.fill", tint: .gray),

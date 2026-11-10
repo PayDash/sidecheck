@@ -1009,7 +1009,7 @@ struct TokenHomeWidget: View {
     var body: some View {
         if let today = tokscale.todaySummary {
             HStack(spacing: 12) {
-                Image(systemName: "textformat.123")
+                Image(systemName: "flame.fill")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(theme.accent)
                     .frame(width: 30, height: 30)
@@ -1031,7 +1031,7 @@ struct TokenHomeWidget: View {
             }
         } else {
             HStack(spacing: 10) {
-                Image(systemName: "textformat.123")
+                Image(systemName: "flame.fill")
                     .font(.system(size: 14))
                     .foregroundStyle(theme.textTertiary)
                 Text("Install tokscale for token usage")
@@ -1050,7 +1050,7 @@ struct TokenWideWidget: View {
     var body: some View {
         if let today = tokscale.todaySummary, let snapshot = tokscale.snapshot {
             HStack(spacing: 14) {
-                Image(systemName: "textformat.123")
+                Image(systemName: "flame.fill")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(theme.accent)
                     .frame(width: 34, height: 34)
@@ -1088,7 +1088,7 @@ struct TokenWideWidget: View {
             }
         } else {
             HStack(spacing: 10) {
-                Image(systemName: "textformat.123")
+                Image(systemName: "flame.fill")
                     .font(.system(size: 14))
                     .foregroundStyle(theme.textTertiary)
                 Text("Install tokscale for token usage")

@@ -811,18 +811,63 @@ nonisolated enum TokscaleScanner {
         }
         fputs("[Sidecheck] tokscale: scanning via \(command.joined(separator: " "))\n", stderr)
         do {
-            let sessionData = try TokscaleStore.run(
-                command + ["models", "--json", "--group-by", "client,session,model"] + range.cliFlags
-            )
-            let workspaceData = try TokscaleStore.run(
-                command + ["models", "--json", "--group-by", "workspace,model"] + range.cliFlags
-            )
+            // The three invocations are independent — run them concurrently
+            // and wait once, so a scan costs the slowest command (~2 s) not
+            // the sum of all three.
+            let group = DispatchGroup()
+            let scanQueue = DispatchQueue(label: "sidecheck.tokscale.scan", attributes: .concurrent)
+            let lock = NSLock()
+            var sessionData: Data?
+            var workspaceData: Data?
+            var graphData: Data?
+            var failure: String?
+
             let graphPath = NSTemporaryDirectory() + "sidecheck-tokscale-graph.json"
-            _ = try TokscaleStore.run(command + ["graph", "--output", graphPath])
-            let graphData = FileManager.default.contents(atPath: graphPath)
+
+            group.enter()
+            scanQueue.async {
+                defer { group.leave() }
+                do {
+                    let data = try TokscaleStore.run(
+                        command + ["models", "--json", "--group-by", "client,session,model"] + range.cliFlags
+                    )
+                    lock.lock(); sessionData = data; lock.unlock()
+                } catch {
+                    lock.lock(); failure = error.localizedDescription; lock.unlock()
+                }
+            }
+            group.enter()
+            scanQueue.async {
+                defer { group.leave() }
+                do {
+                    let data = try TokscaleStore.run(
+                        command + ["models", "--json", "--group-by", "workspace,model"] + range.cliFlags
+                    )
+                    lock.lock(); workspaceData = data; lock.unlock()
+                } catch {
+                    lock.lock(); failure = error.localizedDescription; lock.unlock()
+                }
+            }
+            group.enter()
+            scanQueue.async {
+                defer { group.leave() }
+                do {
+                    _ = try TokscaleStore.run(command + ["graph", "--output", graphPath])
+                    let data = FileManager.default.contents(atPath: graphPath)
+                    try? FileManager.default.removeItem(atPath: graphPath)
+                    guard let data else {
+                        throw TokscaleError.emptyOutput("graph")
+                    }
+                    lock.lock(); graphData = data; lock.unlock()
+                } catch {
+                    lock.lock(); failure = error.localizedDescription; lock.unlock()
+                }
+            }
+            group.wait()
             try? FileManager.default.removeItem(atPath: graphPath)
-            guard let graphData else {
-                throw TokscaleError.emptyOutput("graph")
+
+            guard let sessionData, let workspaceData, let graphData else {
+                throw TokscaleError.commandFailed(failure ?? "a scan step produced no output")
             }
 
             let sessionResponse = try TokscaleParser.parseGrouped(sessionData)
