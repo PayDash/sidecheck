@@ -7,6 +7,7 @@ struct ClipboardAppView: View {
     @Environment(\.theme) private var theme
     @EnvironmentObject var clipboard: ClipboardStore
     @State private var query = ""
+    @FocusState private var searchFocused: Bool
 
     private var filtered: [ClipboardStore.Item] {
         query.isEmpty
@@ -36,7 +37,7 @@ struct ClipboardAppView: View {
                             .background(theme.cardFill, in: Capsule())
                             .overlay(Capsule().strokeBorder(theme.cardStroke, lineWidth: 1))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                     .help("Clear clipboard history")
                 }
             }
@@ -72,6 +73,7 @@ struct ClipboardAppView: View {
                 .textFieldStyle(.plain)
                 .font(.system(size: 12))
                 .foregroundStyle(theme.textPrimary)
+                .focused($searchFocused)
             if !query.isEmpty {
                 Button {
                     query = ""
@@ -80,7 +82,7 @@ struct ClipboardAppView: View {
                         .font(.system(size: 11))
                         .foregroundStyle(theme.textTertiary)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
                 .help("Clear search")
             }
         }
@@ -89,8 +91,9 @@ struct ClipboardAppView: View {
         .background(theme.cardFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(theme.cardStroke, lineWidth: 1)
+                .strokeBorder(searchFocused ? theme.accent.opacity(0.5) : theme.cardStroke, lineWidth: 1)
         )
+        .animation(PanelMotion.hover, value: searchFocused)
     }
 
     private var emptyState: some View {
@@ -131,7 +134,7 @@ private struct ClipboardRow: View {
             } label: {
                 rowContent
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
 
             if hovered {
                 Button {
@@ -144,7 +147,7 @@ private struct ClipboardRow: View {
                         .background(Circle().fill(theme.cardFill))
                         .overlay(Circle().strokeBorder(theme.cardStroke, lineWidth: 1))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
                 .transition(.opacity)
                 .help("Remove from history")
             }

@@ -79,6 +79,7 @@ struct WallpaperAppView: View {
         ThemedCard {
             VStack(alignment: .leading, spacing: 10) {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 76), spacing: 8)], spacing: 8) {
+                    animatedTile(.glow, name: "Glow", colors: [Color(white: 0.16), Color(white: 0.05)])
                     animatedTile(.bubbles, name: "Bubbles", colors: [Color.white.opacity(0.35), Color.blue.opacity(0.4)])
                     animatedTile(.crt, name: "CRT", colors: [Color.black, Color(red: 0.05, green: 0.32, blue: 0.13)])
                 }
@@ -134,7 +135,7 @@ struct WallpaperAppView: View {
                     .lineLimit(1)
             }
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
         .scaleEffect(isSelected ? 1.0 : 0.97)
         .animation(.spring(response: 0.3, dampingFraction: 0.8), value: isSelected)
     }
@@ -176,7 +177,7 @@ struct WallpaperAppView: View {
             }
             .frame(width: 34, height: 34)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
     }
 
     private static let solidPresets: [Color] = [
@@ -323,7 +324,7 @@ struct WallpaperAppView: View {
                         .strokeBorder(theme.accent.opacity(0.4), lineWidth: 1)
                 )
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
     }
 
     private func smallButton(_ title: String, action: @escaping () -> Void) -> some View {
@@ -338,7 +339,7 @@ struct WallpaperAppView: View {
                 .background(theme.cardFill, in: Capsule())
                 .overlay(Capsule().strokeBorder(theme.cardStroke, lineWidth: 1))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
     }
 
     private var cropBinding: Binding<CropSpec> {
@@ -379,7 +380,7 @@ struct WallpaperAppView: View {
                     .background(theme.cardFill, in: Capsule())
                     .overlay(Capsule().strokeBorder(theme.cardStroke, lineWidth: 1))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
             .disabled(spec == WallpaperStore.defaultSpec(for: themes.current))
             .opacity(spec == WallpaperStore.defaultSpec(for: themes.current) ? 0.4 : 1)
 
@@ -394,7 +395,7 @@ struct WallpaperAppView: View {
                     .background(theme.accent.opacity(0.12), in: Capsule())
                     .overlay(Capsule().strokeBorder(theme.accent.opacity(0.4), lineWidth: 1))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
             .disabled(spec == WallpaperStore.defaultSpec(for: themes.current))
             .opacity(spec == WallpaperStore.defaultSpec(for: themes.current) ? 0.4 : 1)
             Spacer()
@@ -469,15 +470,16 @@ struct CropEditorView: View {
             .gesture(dragGesture(size: size))
             .simultaneousGesture(magnificationGesture(size: size))
 
-            Slider(value: Binding(
+            // PanelSlider — the AppKit-backed Slider stutters the panel's
+            // open/close animation while this page is mounted.
+            PanelSlider(value: Binding(
                 get: { Double(crop.scale) },
                 set: { newValue in
                     var next = crop
                     next.scale = CGFloat(newValue)
                     crop = Self.clamp(next, mode: mode, viewport: size)
                 }
-            ), in: 1...5)
-            .controlSize(.mini)
+            ), range: 1...5)
         }
     }
 
@@ -603,7 +605,7 @@ private struct SolidColorPickerRow: View {
                             .strokeBorder(theme.cardStroke, lineWidth: 1.5)
                     )
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
             Spacer()
         }
     }

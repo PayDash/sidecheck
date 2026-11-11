@@ -9,6 +9,7 @@ import SwiftUI
 enum BackgroundKind: String, Codable, CaseIterable {
     case bubbles
     case crt
+    case glow
     case solid
     case gradient
     case image
@@ -114,6 +115,8 @@ struct PanelBackgroundView: View {
             GlassBubblesBackground(paused: paused || !features.contains(.animatedBackgrounds))
         case .crt:
             CyberdeckBackground(paused: paused || !features.contains(.animatedBackgrounds))
+        case .glow:
+            GlowBackground(paused: paused || !features.contains(.animatedBackgrounds))
         case .solid:
             (spec.color?.color ?? Color(red: 0.08, green: 0.09, blue: 0.12))
                 .ignoresSafeArea()
@@ -150,9 +153,11 @@ struct PanelBackgroundView: View {
 
 // MARK: - Glass bubbles (Liquid Glass native)
 
-/// Translucent glass bubbles rising slowly over the vibrancy layer — rim-lit,
-/// softly shaded, with a small top sheen. Replaces the aurora. One Canvas
-/// draw per frame (30 fps), fully deterministic (no per-frame randomness).
+/// Translucent glass bubbles rising slowly over the vibrancy layer — soft
+/// bokeh light with no hard rims (a crisp rim reads as a solid ball against
+/// the material; a rimless light pool reads as glass). Two depth layers
+/// drift at different speeds. One Canvas draw per frame (30 fps), fully
+/// deterministic (no per-frame randomness).
 struct GlassBubblesBackground: View {
     let paused: Bool
 
@@ -163,16 +168,19 @@ struct GlassBubblesBackground: View {
         let phase: Double       // phase offset in the rise cycle + wobble
         let wobbleAmp: CGFloat
         let wobbleSpeed: Double
+        let depth: Double       // 0 = far (dim, slow), 1 = near
     }
 
     private static let bubbles: [Bubble] = [
-        Bubble(xFrac: 0.18, radius: 34, speed: 17, phase: 0.00, wobbleAmp: 12, wobbleSpeed: 0.31),
-        Bubble(xFrac: 0.52, radius: 14, speed: 26, phase: 0.31, wobbleAmp: 9, wobbleSpeed: 0.53),
-        Bubble(xFrac: 0.78, radius: 24, speed: 20, phase: 0.58, wobbleAmp: 14, wobbleSpeed: 0.24),
-        Bubble(xFrac: 0.36, radius: 9, speed: 31, phase: 0.77, wobbleAmp: 7, wobbleSpeed: 0.68),
-        Bubble(xFrac: 0.90, radius: 12, speed: 24, phase: 0.42, wobbleAmp: 10, wobbleSpeed: 0.44),
-        Bubble(xFrac: 0.64, radius: 18, speed: 15, phase: 0.88, wobbleAmp: 11, wobbleSpeed: 0.36),
-        Bubble(xFrac: 0.08, radius: 11, speed: 28, phase: 0.65, wobbleAmp: 8, wobbleSpeed: 0.60),
+        // far layer — large, slow, faint
+        Bubble(xFrac: 0.18, radius: 24, speed: 9, phase: 0.00, wobbleAmp: 12, wobbleSpeed: 0.31, depth: 0),
+        Bubble(xFrac: 0.52, radius: 18, speed: 13, phase: 0.31, wobbleAmp: 9, wobbleSpeed: 0.53, depth: 0),
+        Bubble(xFrac: 0.78, radius: 21, speed: 11, phase: 0.58, wobbleAmp: 14, wobbleSpeed: 0.24, depth: 0),
+        // near layer — smaller, livelier, brighter
+        Bubble(xFrac: 0.36, radius: 10, speed: 24, phase: 0.77, wobbleAmp: 7, wobbleSpeed: 0.68, depth: 1),
+        Bubble(xFrac: 0.90, radius: 12, speed: 20, phase: 0.42, wobbleAmp: 10, wobbleSpeed: 0.44, depth: 1),
+        Bubble(xFrac: 0.64, radius: 14, speed: 17, phase: 0.88, wobbleAmp: 11, wobbleSpeed: 0.36, depth: 1),
+        Bubble(xFrac: 0.08, radius: 9, speed: 26, phase: 0.65, wobbleAmp: 8, wobbleSpeed: 0.60, depth: 1),
     ]
 
     var body: some View {
@@ -195,33 +203,100 @@ struct GlassBubblesBackground: View {
         let y = size.height + bubble.radius - (t * bubble.speed + bubble.phase * travel)
             .truncatingRemainder(dividingBy: travel)
 
-        // fade out near the top edge / in near the bottom
-        let edge = min(1, (y + bubble.radius) / 44, (size.height - y + bubble.radius) / 44)
+        // fade out near the top edge / in near the bottom — wide band so
+        // bubbles never pop in at the boundaries
+        let edge = min(1, (y + bubble.radius) / 90, (size.height - y + bubble.radius) / 90)
         guard edge > 0 else { return }
 
+        let scale = 0.6 + 0.4 * bubble.depth // far bubbles sit back
         let rect = CGRect(x: x - bubble.radius, y: y - bubble.radius, width: bubble.radius * 2, height: bubble.radius * 2)
-        // body: soft white sphere shading
+        // body: a soft light pool, brightest just above center, dissolving
+        // into the material at the edge — no rim to fake an object boundary
         context.fill(
             Path(ellipseIn: rect),
             with: .radialGradient(
-                Gradient(colors: [.white.opacity(0.13 * edge), .white.opacity(0.05 * edge), .clear]),
-                center: CGPoint(x: x - bubble.radius * 0.35, y: y - bubble.radius * 0.4),
-                startRadius: 1, endRadius: bubble.radius * 1.35
+                Gradient(stops: [
+                    .init(color: .white.opacity(0.14 * scale * edge), location: 0),
+                    .init(color: .white.opacity(0.06 * scale * edge), location: 0.45),
+                    .init(color: .clear, location: 1),
+                ]),
+                center: CGPoint(x: x - bubble.radius * 0.3, y: y - bubble.radius * 0.35),
+                startRadius: 1, endRadius: bubble.radius * 1.25
             )
         )
-        // rim light
-        context.stroke(
-            Path(ellipseIn: rect),
-            with: .color(.white.opacity(0.20 * edge)),
-            lineWidth: 1.2
+        // sheen: a small soft highlight near the top, itself rimless
+        let sheenRect = CGRect(
+            x: x - bubble.radius * 0.5, y: y - bubble.radius * 0.7,
+            width: bubble.radius * 0.8, height: bubble.radius * 0.5
         )
-        // top sheen
-        let sheen = CGRect(x: x - bubble.radius * 0.45, y: y - bubble.radius * 0.62, width: bubble.radius * 0.72, height: bubble.radius * 0.42)
-
         context.fill(
-            Path(ellipseIn: sheen),
-            with: .color(.white.opacity(0.15 * edge))
+            Path(ellipseIn: sheenRect),
+            with: .radialGradient(
+                Gradient(colors: [.white.opacity(0.18 * scale * edge), .clear]),
+                center: CGPoint(x: x - bubble.radius * 0.25, y: y - bubble.radius * 0.55),
+                startRadius: 1, endRadius: bubble.radius * 0.6
+            )
         )
+    }
+}
+
+// MARK: - Glow (Noir native)
+
+/// Soft white light fields drifting over near-black — the Noir theme's
+/// native background. Deterministic (no per-frame randomness), one Canvas
+/// draw per frame (30 fps), pauses like the other animated kinds.
+struct GlowBackground: View {
+    let paused: Bool
+
+    private struct Orb {
+        let xFrac: CGFloat
+        let yFrac: CGFloat      // vertical anchor, 0...1
+        let radius: CGFloat
+        let drift: CGFloat      // horizontal wander amplitude
+        let period: Double      // seconds per sway cycle
+        let phase: Double
+        let alpha: Double
+    }
+
+    private static let orbs: [Orb] = [
+        Orb(xFrac: 0.20, yFrac: 0.75, radius: 95, drift: 26, period: 26, phase: 0.0, alpha: 0.10),
+        Orb(xFrac: 0.82, yFrac: 0.25, radius: 70, drift: 20, period: 34, phase: 0.4, alpha: 0.08),
+        Orb(xFrac: 0.55, yFrac: 0.50, radius: 55, drift: 32, period: 42, phase: 0.75, alpha: 0.07),
+        Orb(xFrac: 0.10, yFrac: 0.20, radius: 45, drift: 18, period: 38, phase: 0.9, alpha: 0.06),
+    ]
+
+    var body: some View {
+        ZStack {
+            Color(red: 0.028, green: 0.028, blue: 0.034)
+            TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: paused)) { context in
+                let t = context.date.timeIntervalSinceReferenceDate
+                Canvas { context, size in
+                    for orb in Self.orbs {
+                        let x = orb.xFrac * size.width + sin(t / orb.period + orb.phase * 6) * orb.drift
+                        let y = orb.yFrac * size.height + cos(t / (orb.period * 1.4) + orb.phase * 4) * orb.drift * 0.6
+                        let rect = CGRect(x: x - orb.radius, y: y - orb.radius, width: orb.radius * 2, height: orb.radius * 2)
+                        context.fill(
+                            Path(ellipseIn: rect),
+                            with: .radialGradient(
+                                Gradient(stops: [
+                                    .init(color: .white.opacity(orb.alpha), location: 0),
+                                    .init(color: .white.opacity(orb.alpha * 0.35), location: 0.5),
+                                    .init(color: .clear, location: 1),
+                                ]),
+                                center: CGPoint(x: x, y: y),
+                                startRadius: 1, endRadius: orb.radius
+                            )
+                        )
+                    }
+                }
+            }
+            // vignette — keeps the edges black so cards float
+            RadialGradient(
+                colors: [.clear, Color.black.opacity(0.5)],
+                center: .center, startRadius: 140, endRadius: 430
+            )
+        }
+        .ignoresSafeArea()
     }
 }
 
@@ -249,13 +324,26 @@ struct CyberdeckBackground: View {
             TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: paused)) { context in
                 let t = context.date.timeIntervalSinceReferenceDate
                 let bandY = (t * 60).truncatingRemainder(dividingBy: 1000) - 200
-                LinearGradient(
-                    colors: [.clear, Color(red: 0.3, green: 1.0, blue: 0.5).opacity(0.06), .clear],
-                    startPoint: .top, endPoint: .bottom
-                )
-                .frame(height: 140)
-                .offset(y: bandY)
-                .frame(maxHeight: .infinity, alignment: .top)
+                let deepY = (t * 22).truncatingRemainder(dividingBy: 1000) - 200
+                ZStack {
+                    // deep sweep — slow and faint, gives the tube depth
+                    LinearGradient(
+                        colors: [.clear, Color(red: 0.3, green: 1.0, blue: 0.5).opacity(0.03), .clear],
+                        startPoint: .top, endPoint: .bottom
+                    )
+                    .frame(height: 220)
+                    .offset(y: deepY)
+                    .frame(maxHeight: .infinity, alignment: .top)
+
+                    // refresh band
+                    LinearGradient(
+                        colors: [.clear, Color(red: 0.3, green: 1.0, blue: 0.5).opacity(0.06), .clear],
+                        startPoint: .top, endPoint: .bottom
+                    )
+                    .frame(height: 140)
+                    .offset(y: bandY)
+                    .frame(maxHeight: .infinity, alignment: .top)
+                }
             }
 
             // vignette

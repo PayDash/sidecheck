@@ -27,6 +27,11 @@ struct PanelView: View {
 
     @State private var page: Page = .home
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Open choreography: groups settle in with a stagger once per show.
+    /// Resets silently while hidden; State resets to true on theme remounts,
+    /// so theme morphs never replay the stagger.
+    @State private var entranceShown = true
+    @State private var bootShimmerActive = false
 
     /// Saver mode reuses the Reduce-Motion pathways: instant movement, no
     /// micro-animations. (Background freezing is handled inside
@@ -61,8 +66,16 @@ struct PanelView: View {
         .clipShape(RoundedRectangle(cornerRadius: theme.panelRadius, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: theme.panelRadius, style: .continuous)
-                .strokeBorder(theme.isLight ? Color.white.opacity(0.6) : Color.white.opacity(0.10), lineWidth: 1)
+                .strokeBorder(panelRim, lineWidth: 1)
         )
+        .overlay {
+            // One CRT power-on sweep per open, phosphor themes only.
+            if bootShimmerActive {
+                BootShimmerBand(accent: theme.accent)
+                    .transition(.opacity)
+                    .allowsHitTesting(false)
+            }
+        }
         .environmentObject(controller)
         .environmentObject(stats)
         .environmentObject(themes)
@@ -82,12 +95,59 @@ struct PanelView: View {
         .opacity(controller.isVisible ? 1 : 0)
         .scaleEffect(controller.isVisible || effectsOff ? 1 : entranceScale, anchor: .trailing)
         .animation(effectsOff ? .linear(duration: 0.12) : entranceSpring, value: controller.isVisible)
+        .onChange(of: controller.isVisible) { _, visible in
+            guard visible else { return }
+            if !effectsOff {
+                entranceShown = false
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.03) {
+                    MainActor.assumeIsolated { entranceShown = true }
+                }
+            }
+            if themes.current.spec.bootShimmer, !effectsOff, performance.isOn(.microAnimations) {
+                bootShimmerActive = true
+                Task {
+                    try? await Task.sleep(for: .milliseconds(650))
+                    bootShimmerActive = false
+                }
+            }
+        }
         .onChange(of: controller.requestedApp) { _, newValue in
             guard let appID = newValue else { return }
             withAnimation(effectsOff ? nil : .spring(response: 0.42, dampingFraction: 0.88)) {
                 page = .app(appID)
             }
             controller.requestedApp = nil
+        }
+    }
+
+    /// Lit themes: a rim that catches light from the top-leading corner and
+    /// falls off toward the bottom — reads as one lit glass object. Flat
+    /// themes keep their declared stroke.
+    private var panelRim: AnyShapeStyle {
+        if themes.current.spec.litPanelBorder {
+            return AnyShapeStyle(LinearGradient(
+                colors: [Color.white.opacity(0.30), Color.white.opacity(0.10), Color.white.opacity(0.05)],
+                startPoint: .topLeading, endPoint: .bottomTrailing
+            ))
+        }
+        if theme.isLight { return AnyShapeStyle(Color.white.opacity(0.6)) }
+        return AnyShapeStyle(Color.white.opacity(0.10))
+    }
+
+    /// One phosphor band washing down the panel — CRT power-on.
+    private struct BootShimmerBand: View {
+        let accent: Color
+        @State private var swept = false
+
+        var body: some View {
+            GeometryReader { geo in
+                LinearGradient(colors: [.clear, accent.opacity(0.20), .clear], startPoint: .top, endPoint: .bottom)
+                    .frame(height: 120)
+                    .offset(y: swept ? geo.size.height + 140 : -140)
+            }
+            .onAppear {
+                withAnimation(.easeOut(duration: 0.5)) { swept = true }
+            }
         }
     }
 
@@ -111,13 +171,14 @@ struct PanelView: View {
 
             VStack(spacing: 0) {
                 header
+                    .entranceGroup(shown: effectsOff ? true : entranceShown, index: 0)
                 Rectangle()
                     .fill(spec.divider)
                     .frame(height: 1)
                 ZStack {
                     switch page {
                     case .home:
-                        HomeScreen(onOpenApp: openApp)
+                        HomeScreen(onOpenApp: openApp, entrance: effectsOff ? true : entranceShown)
                             .transition(pageTransition(edge: .leading))
                     case .app(let appID):
                         appID.fullView
@@ -125,6 +186,7 @@ struct PanelView: View {
                     }
                 }
                 .animation(effectsOff ? nil : .spring(response: 0.42, dampingFraction: 0.88), value: page)
+                .entranceGroup(shown: effectsOff ? true : entranceShown, index: 1)
             }
         }
         .foregroundStyle(spec.textPrimary)
@@ -147,21 +209,55 @@ struct PanelView: View {
     }
 
     private func pageTransition(edge: Edge) -> AnyTransition {
-        let move = effectsOff ? AnyTransition.opacity : AnyTransition.move(edge: edge).combined(with: .opacity)
-        return .asymmetric(insertion: move, removal: move)
+        if effectsOff {
+            return .asymmetric(insertion: .opacity, removal: .opacity)
+        }
+        // Incoming page slides in; outgoing slides out while receding a touch
+        // in scale — depth instead of a flat swap.
+        let insertion = AnyTransition.move(edge: edge).combined(with: .opacity)
+        let removal = AnyTransition.move(edge: edge)
+            .combined(with: .scale(scale: 0.96, anchor: .center))
+            .combined(with: .opacity)
+        return .asymmetric(insertion: insertion, removal: removal)
     }
 
     // MARK: Header
 
+    /// Home-header clock — digits only ("4:06"); the AM/PM tail dragged the
+    /// centered clock's weight off balance.
+    private static let homeClockFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "h:mm"
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        return formatter
+    }()
+
     private var header: some View {
         HStack(spacing: 10) {
             pinButton
-            Text(pageTitle)
-                .font(.system(size: 15, weight: .bold, design: theme.fontDesign))
-                .foregroundStyle(theme.textPrimary)
-            Spacer()
-            if theme.showsClockInHeader {
-                clockChip
+            if case .home = page, theme.showsClockInHeader {
+                // Noir-style home header: the wordmark trades its spot for a
+                // live clock, centered between pin and gear (ticks 1 Hz while
+                // visible, pauses hidden).
+                Spacer(minLength: 0)
+                TimelineView(.animation(minimumInterval: 1.0, paused: controller.isFullyHidden)) { context in
+                    Text(Self.homeClockFormatter.string(from: context.date))
+                        .font(.system(size: 22, weight: .regular, design: theme.fontDesign))
+                        .monospacedDigit()
+                        .foregroundStyle(theme.textPrimary)
+                        // Softer, two-pass glow — the standard themeGlow smears
+                        // serif digits at this size.
+                        .shadow(color: Color.white.opacity(0.26), radius: 4)
+                        .shadow(color: Color.white.opacity(0.3), radius: 1.2)
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: false)
+                }
+                Spacer(minLength: 0)
+            } else {
+                Text(pageTitle)
+                    .font(.system(size: 15, weight: .bold, design: theme.fontDesign))
+                    .foregroundStyle(theme.textPrimary)
+                Spacer()
             }
             if home.isEditMode, page == .home {
                 doneButton
@@ -182,24 +278,16 @@ struct PanelView: View {
             Image(systemName: controller.isPinned ? "pin.fill" : "pin")
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(controller.isPinned ? theme.accent : theme.textSecondary)
+                // A small bounce confirms the state change (Reduce Motion
+                // keeps the value constant, so the effect never triggers).
+                .symbolEffect(.bounce, value: controller.isPinned && !reduceMotion)
                 .padding(6)
                 .background(
                     Circle().fill(controller.isPinned ? theme.accent.opacity(0.16) : .clear)
                 )
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
         .help(controller.isPinned ? "Unpin — auto-hide on leave" : "Pin — keep panel open")
-    }
-
-    private var clockChip: some View {
-        Text(Date(), style: .time)
-            .font(.system(size: 11, weight: .semibold, design: theme.fontDesign))
-            .monospacedDigit()
-            .foregroundStyle(theme.textSecondary)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(theme.cardFill, in: Capsule())
-            .overlay(Capsule().strokeBorder(theme.cardStroke, lineWidth: 1))
     }
 
     private var doneButton: some View {
@@ -211,7 +299,7 @@ struct PanelView: View {
                 .foregroundStyle(theme.accent)
                 .padding(6)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
         .help("Leave edit mode")
     }
 
@@ -224,7 +312,7 @@ struct PanelView: View {
                 .foregroundStyle(theme.textSecondary)
                 .padding(6)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
         .help("Home")
     }
 
@@ -238,7 +326,7 @@ struct PanelView: View {
                 .foregroundStyle(settingsOpen ? theme.accent : theme.textSecondary)
                 .padding(6)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
         .help("Settings")
     }
 }

@@ -46,6 +46,7 @@ struct PerformanceAppView: View {
         switch currentKind {
         case .bubbles: "Bubbles"
         case .crt: "CRT"
+        case .glow: "Glow"
         case .solid: "Solid color"
         case .gradient: GradientPresets.byID(wallpaper.spec(for: themes.current).gradientID)?.name ?? "Gradient"
         case .image: "Picture"
@@ -122,7 +123,7 @@ struct PerformanceAppView: View {
                 }
             }
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
     }
 
     private var powerManagedNote: some View {

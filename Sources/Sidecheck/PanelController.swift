@@ -255,7 +255,9 @@ final class PanelController: ObservableObject {
             panel.setFrame(hidden, display: false)
             panel.alphaValue = 1
             panel.orderFrontRegardless()
-            animateFrame(to: shown, timing: .easeOut)
+            // Ease-out-back: a gentle overshoot before settling — the drawer
+            // lands with life instead of dying against the edge.
+            animateFrame(to: shown, timing: CAMediaTimingFunction(controlPoints: 0.34, 1.56, 0.64, 1))
         case .pop, .zoom:
             panel.setFrame(shown, display: false)
             panel.alphaValue = 0
@@ -283,7 +285,8 @@ final class PanelController: ObservableObject {
         switch animationStyle {
         case .slide:
             let hidden = panel.frame.offsetBy(dx: panel.frame.width + 8, dy: 0)
-            animateFrame(to: hidden, timing: .easeIn) {
+            // Exit faster than enter — leaving should feel snappier.
+            animateFrame(to: hidden, timing: CAMediaTimingFunction(name: .easeIn), duration: animationSpeed * 0.85) {
                 guard !self.isVisible else { return } // re-shown mid-animation
                 self.panel.orderOut(nil)
                 self.isFullyHidden = true
@@ -293,7 +296,7 @@ final class PanelController: ObservableObject {
             }
         case .pop, .zoom:
             NSAnimationContext.runAnimationGroup({ context in
-                context.duration = animationSpeed
+                context.duration = animationSpeed * 0.85
                 context.timingFunction = CAMediaTimingFunction(name: .easeIn)
                 panel.animator().alphaValue = 0
             }, completionHandler: { [weak self] in
@@ -319,7 +322,7 @@ final class PanelController: ObservableObject {
         guard isVisible, let screen = currentScreen else { return }
         let target = shownFrame(on: screen)
         if animated, !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion, performance.isOn(.panelMovement) {
-            animateFrame(to: target, timing: .easeInEaseOut, duration: Config.themeMorphDuration)
+            animateFrame(to: target, timing: CAMediaTimingFunction(name: .easeInEaseOut), duration: Config.themeMorphDuration)
         } else {
             panel.setFrame(target, display: true)
             panel.invalidateShadow()
@@ -328,10 +331,10 @@ final class PanelController: ObservableObject {
 
     // MARK: - Animation plumbing
 
-    private func animateFrame(to frame: CGRect, timing: CAMediaTimingFunctionName, duration: TimeInterval? = nil, completion: (() -> Void)? = nil) {
+    private func animateFrame(to frame: CGRect, timing: CAMediaTimingFunction, duration: TimeInterval? = nil, completion: (() -> Void)? = nil) {
         NSAnimationContext.runAnimationGroup({ context in
             context.duration = duration ?? animationSpeed
-            context.timingFunction = CAMediaTimingFunction(name: timing)
+            context.timingFunction = timing
             context.allowsImplicitAnimation = true
             panel.animator().setFrame(frame, display: true)
         }, completionHandler: { [weak self] in

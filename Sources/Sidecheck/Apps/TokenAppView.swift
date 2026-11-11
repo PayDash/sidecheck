@@ -70,7 +70,7 @@ struct TokenAppView: View {
                     )
                 )
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
     }
 
     // MARK: Content
@@ -282,7 +282,7 @@ struct TokenAppView: View {
                     lineWidth: 1
                 ))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
     }
 
     @ViewBuilder
@@ -473,7 +473,7 @@ struct TokenAppView: View {
 
     private var rescanButton: some View {
         Button {
-            tokscale.scanIfStale(force: true)
+            tokscale.rescan()
         } label: {
             Label("Rescan", systemImage: "arrow.clockwise")
                 .font(.system(size: 11, weight: .semibold))
@@ -483,7 +483,7 @@ struct TokenAppView: View {
                 .background(theme.accent.opacity(0.12), in: Capsule())
                 .overlay(Capsule().strokeBorder(theme.accent.opacity(0.4), lineWidth: 1))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
     }
 
     private var footer: some View {

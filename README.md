@@ -8,7 +8,7 @@ A tiny personal macOS menu-bar app: hover the pointer at the **middle-right edge
 
 The panel is a tiny launcher/OS:
 
-- **Home screen** — 2–6 widget slots + an app grid (+ dock and search pill on themes that want them). Long-press anything → **edit mode** (jiggle): rebind a widget slot to any app, reorder slots, remove them, hit Done.
+- **Home screen** — 2–6 widget slots + an app grid (+ dock and search pill on themes that want them). Long-press anything → **edit mode**: rebind a widget slot to any app, reorder slots, remove them, hit Done.
 - **Apps** — tap an icon to open the full app page:
   - **Monitor** — CPU ring + per-core bars + history + **live temperature (SMC)**, Memory, Battery, Network, Disk, GPU (model identity; utilization isn't exposed by public macOS APIs), uptime
   - **Clipboard** — everything you copy system-wide, captured automatically (strings/links, last 50), searchable, tap to re-copy; password fields (secure input) are never captured
@@ -27,6 +27,7 @@ Three themes on one theme-agnostic base — each theme picks its own **frame siz
 |---|---|---|
 | **Liquid Glass** | 380×680 | dark vibrancy + rising glass bubbles |
 | **Cyberdeck** | 380×680 | phosphor terminal, scanlines, `» TEXT MENU` home template |
+| **Noir** | 380×680 | black & white serif glow, drifting light fields, widgets stacked full-width, status-only color (green/yellow/red) |
 
 ### Adding a theme
 
@@ -40,7 +41,7 @@ Everything a theme does is declared in its `ThemeSpec` — no view special-cases
 4. `ThemeID.spec` extension switch
 5. `previewGradient` switch (settings swatch)
 
-**Spec knobs to choose:** `frameSize` (width ≥ 500 unlocks 6 home slots), `homeStyle` (icon tiles / terminal list), `homeStyle` decorations (`showsDock`, `showsSearchPill`, `showsClockInHeader` — pill/clock are currently false on both themes and kept as levers), `iconCornerRadiusRatio`, `iconLabelIsWhite`, `glow` (phosphor glow, Cyberdeck-only by design), `isLight` (switches system appearance), accent + text-role colors, `defaultBackground` (out-of-box wallpaper kind), `showsCornerBrackets` (card decoration).
+**Spec knobs to choose:** `frameSize` (width ≥ 500 unlocks 6 home slots), `homeStyle` (icon tiles / terminal list), `homeStyle` decorations (`showsDock`, `showsSearchPill`, `showsClockInHeader` — pill/clock are currently false on both themes and kept as levers), `iconCornerRadiusRatio`, `iconLabelIsWhite`, `glow` (phosphor glow, Cyberdeck-only by design), `isLight` (switches system appearance), accent + text-role colors, `defaultBackground` (out-of-box wallpaper kind), `showsCornerBrackets` (card decoration), `litCardEdges` (directional top-lit card rims instead of a flat stroke), `litPanelBorder` (lit gradient panel rim), `bootShimmer` (one CRT power-on sweep per panel open), `meterSegments` (phosphor-segment widget meters vs smooth capsules), `stacksWideWidgets` (every home slot renders full-width, stacked — unlocks all 6 slots), `typographicWidgets` (serif type-first widget variants), `monochromeTiles` (white-on-dark app tiles), `accentIsLight` (dark glyphs on accent fills).
 
 **Automatic — no code needed:** settings theme grid, menu-bar Theme submenu (identified by rawValue, never by row index), persisted `themeID` restore, per-theme `wallpaperSpecs` decode, window frame morph on switch, `ThemeTemplateTests` (fails if the spec is incomplete).
 
@@ -54,7 +55,7 @@ Everything a theme does is declared in its `ThemeSpec` — no view special-cases
 - **Home widgets** — slot count (2–6) and reorder chevrons per slot
 - **Alerts** — low-battery notifications at 20% and 10% (asks for notification permission once, on enable)
 - **Appearance** — theme picker
-- Reduce Motion is respected everywhere (fade-only entrance, static backgrounds, no jiggle, instant theme switch)
+- Reduce Motion is respected everywhere (fade-only entrance, static backgrounds, instant theme switch)
 
 ## Behavior & controls
 
@@ -82,7 +83,7 @@ cp -R build/Sidecheck.app /Applications/   # to install
 - `Apps/ScreenTimeStore.swift` — foreground-app usage tracker (NSWorkspace activations + 1 s heartbeat, CGEventSource idle pause, lock/sleep/fast-user-switch suspensions), per-day JSON in UserDefaults, 90-day retention; zero permissions
 - `Apps/ScreenTimeAppView.swift` — Today/Week dashboard (Canvas bar chart, hour/day drill-down, Most Used with LaunchServices icons)
 - `Apps/ClipboardStore.swift` — pasteboard change-count polling → 50-item history, persisted
-- `Apps/WallpaperStore.swift` — per-theme `BackgroundSpec` persistence (`wallpaperSpecs`), image cache, looping AVPlayers. Kinds: bubbles/crt/solid/gradient/picture/video (theme-native + blobs removed v0.9 — stale persisted kinds decode as bubbles; per-theme defaults via `defaultSpec(for:)`). The custom color picker orders `NSColorPanel` front directly with a target/action bridge + `NSApp.activate` — a well click in the non-activating panel never opens it otherwise; while open, the edge tracker vetoes auto-hide
+- `Apps/WallpaperStore.swift` — per-theme `BackgroundSpec` persistence (`wallpaperSpecs`), image cache, looping AVPlayers. Kinds: bubbles/crt/glow/solid/gradient/picture/video (theme-native + blobs removed v0.9 — stale persisted kinds decode as bubbles; per-theme defaults via `defaultSpec(for:)`). The custom color picker orders `NSColorPanel` front directly with a target/action bridge + `NSApp.activate` — a well click in the non-activating panel never opens it otherwise; while open, the edge tracker vetoes auto-hide
 - `Backgrounds.swift` — spec-driven `PanelBackgroundView` (bubbles / CRT / solid / gradient / picture / video), glass bubbles, gradient presets
 - `Apps/AppViews.swift` — full app pages + IORegistry GPU name helper
 - `ThemeStore.swift` — `ThemeSpec` design tokens incl. `frameSize`, `homeStyle`, `iconCornerRadiusRatio`
@@ -96,8 +97,8 @@ cp -R build/Sidecheck.app /Applications/   # to install
 - `Apps/MusicStore.swift` — Spotify/Music now-playing via osascript (MediaRemote info is entitlement-blocked since macOS 15.4); app-lifetime adaptive poll (3 s visible / 15 s hidden / skipped when no player runs), client-side position interpolation, per-track artwork cache
 - `Apps/ListeningStats.swift` + `ListeningStore.swift` — provider protocol for listening stats; local history accumulates from every poll (background, persisted `"listeningHistory"`, flush throttled 30 s + on track change because SIGTERM skips `applicationWillTerminate`), favorites, "This Mac" provider. Per-listen caps are session-scoped and a position rewind (replay/scrub-back) starts a fresh listen, so looped tracks keep counting
 - `Apps/StatsFmProvider.swift` — optional stats.fm backend (username + optional personal token, nothing hardcoded); public `streams/recent` + `top/*` endpoints, lowercase range values, TTL cache, ISO-fractional date decoding
-- `Apps/TokscaleStore.swift` — shells out to [tokscale](https://github.com/junhoyeo/tokscale) (`models --json --group-by …` for sessions/projects/models, `graph --output` for the all-time daily trend); resolution chain PATH → bunx → npx → TUI-cache fallback; scans run on a background queue, gated to panel-visible (on open + 60 s); no persistence — tokscale owns the data
-- Home screen slot count 1 = one full-width widget slot; Monitor/Screen Time/Tokens/Music have wide variants (`WidgetKind.wideWidget`)
+- `Apps/TokscaleStore.swift` — shells out to [tokscale](https://github.com/junhoyeo/tokscale) (`models --json --group-by …` for sessions/projects/models, `graph --output` for the all-time daily trend); resolution chain PATH → bunx → npx → TUI-cache fallback; scans run on a background queue, gated to panel-visible; **per-range memoization (60 s TTL)** — range switches render the cached snapshot instantly and stale ones refresh behind the scenes (only the Rescan button forces); no persistence — tokscale owns the data
+- Home screen slot count 1 = one full-width widget slot; Monitor/Battery/Screen Time/Tokens/Music have wide variants (`WidgetKind.wideWidget`). Noir (`stacksWideWidgets`) renders **every** slot as a stacked full-width card and unlocks all 6 slots. Classic themes render **hero cards**: the row claims up to ~30% of the frame (`HomeScreen.heroHeight`), each widget's visuals scale with it (`widgetScale` environment), and MeterBar renders per theme — smooth glass capsules vs Cyberdeck's segmented phosphor bars (`ThemeSpec.meterSegments`). Noir widgets are typographic serif (`typographicWidgets`): Monitor drops the ring for the big value, Battery is a type-first card, Screen Time lists the top 3 apps, Tokens leads with today's usage, Performance shows the impact estimate
 - Panel settings persist: `themeID`, `panelScale`, `panelAnimationStyle`, `panelAnimationSpeed`, `homeSlotCount`, `homeWidgetSlots`, `wallpaperSpecs`, `hotZoneWidth`, `hotZoneSpan`, `showDwellDelay`, `hideDwellDelay`, `lowBatteryAlertsEnabled`, `clipboardItems`, `screenTimeDays`, `screenTimeEnabled`, `screenTimeIdleMinutes`, `awakeKeepsDisplay`, `awakePID`
 
 ## Dev/test hooks
@@ -114,8 +115,9 @@ SIDECHECK_AUTOSHOW=1 SIDECHECK_OPENAPP=settings .build/release/Sidecheck
 
 - [ ] More apps (top processes, now-playing, quick launch)
 - [ ] Multi-page home + drag-to-rearrange icons
+- [x] Noir — B&W serif glow theme with stacked widgets
 - [ ] More themes (the Vita bubble look may return as a template)
 - [ ] Global hotkey to toggle the panel
 
 ---
-*v0.13.1 — audit hardening: stats.fm URLs are built from parts (a space in a persisted username used to crash the Music page on every open), listening history counts repeat listens (session-scoped cap + replay detection via player position), the process scan runs off the main thread, a token range tap during an in-flight scan now leads instead of dropping, short Spotify tracks read the right duration. Still built by an agent and its human.* ⚡
+*v0.15.0 — **Noir**, the third theme: black & white with a serif glow, status-only color (green charging / yellow hot / red critical), a drifting light-field background (`glow` kind), monochrome app tiles, and home widgets stacked full-width (2–6 of them). The home header trades the wordmark for a centered live clock. Music's wide widget trades its play badge for an animated equalizer, the Music app drops the player tag, Tokens' long widget tightens to usage + cache hit, and the Wallpaper/Disk/Settings home widgets are removed. Plus the polish: typographic widgets, memory visualizer fixes, Tokens per-range caching. Still built by an agent and its human.* ⚡Still built by an agent and its human.* ⚡

@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Owns the home-screen state: how many widget slots exist, which widgets
-/// occupy them, and whether the home screen is in edit ("jiggle") mode.
+/// occupy them, and whether the home screen is in edit mode.
 /// Slot count and assignments persist in UserDefaults.
 @MainActor
 final class HomeStore: ObservableObject {
@@ -41,7 +41,17 @@ final class HomeStore: ObservableObject {
 
     init() {
         let defaults = UserDefaults.standard
-        let persistedCount = defaults.object(forKey: Self.slotCountKey) as? Int ?? 2
+        // Accept numeric strings too (e.g. `defaults write` writes strings) —
+        // same fallback chain PanelController uses for its settings.
+        let countObject = defaults.object(forKey: Self.slotCountKey)
+        let persistedCount: Int
+        if let number = countObject as? Int {
+            persistedCount = number
+        } else if let string = countObject as? NSString {
+            persistedCount = Int(string.intValue)
+        } else {
+            persistedCount = 2
+        }
         let initialCount = min(max(persistedCount, Config.slotCountRange.lowerBound), Config.slotCountRange.upperBound)
         slotCount = initialCount
 

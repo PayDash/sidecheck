@@ -29,13 +29,91 @@ struct VisualEffectBackground: View {
     }
 }
 
+// MARK: - Motion language
+
+/// The panel's motion tokens — calm and precise: one press feel, one entrance
+/// feel, reused everywhere so the whole panel moves as one object.
+enum PanelMotion {
+    /// Press feedback (direct manipulation — not gated, it's state, not decoration).
+    static let press = Animation.spring(response: 0.2, dampingFraction: 0.7)
+    /// Hover lifts.
+    static let hover = Animation.spring(response: 0.25, dampingFraction: 0.8)
+    /// Entrance settles (staggered groups, rings drawing in).
+    static let entrance = Animation.spring(response: 0.32, dampingFraction: 0.85)
+    /// Per-group delay in the open choreography.
+    static let staggerStep: TimeInterval = 0.045
+}
+
+/// Button style with press-down feedback — replaces `.plain` for every
+/// tappable element so nothing on the panel feels dead under the pointer.
+struct PressableButtonStyle: ButtonStyle {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.97 : 1)
+            .opacity(configuration.isPressed ? 0.85 : 1)
+            .animation(PanelMotion.press, value: configuration.isPressed)
+    }
+}
+
+extension ButtonStyle where Self == PressableButtonStyle {
+    static var pressable: PressableButtonStyle { .init() }
+}
+
+/// One group in the open choreography. `shown` flips once per panel show;
+/// each group fades + rises with its own stagger delay. The flag resets
+/// silently on hide and on theme remounts (State resets to `true`), so it
+/// never re-animates outside the open transition.
+struct EntranceGroup: ViewModifier {
+    let shown: Bool
+    let index: Int
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(shown ? 1 : 0)
+            .offset(y: shown ? 0 : 8)
+            .animation(
+                shown ? PanelMotion.entrance.delay(Double(index) * PanelMotion.staggerStep) : nil,
+                value: shown
+            )
+    }
+}
+
+extension View {
+    /// `shown` already incorporates the performance/reduce-motion gates.
+    func entranceGroup(shown: Bool, index: Int) -> some View {
+        modifier(EntranceGroup(shown: shown, index: index))
+    }
+}
+
+// MARK: - Widget sizing
+
+/// Hero widget content scales its visuals (rings, artwork, sparklines,
+/// chips) with the slot height — a taller slot grows the widget, it doesn't
+/// grow the empty space around it. Text sizes stay put: more visual, less
+/// texty. WidgetSlot sets this from the hero height it was given.
+private struct WidgetScaleKey: EnvironmentKey {
+    static let defaultValue: CGFloat = 1
+}
+
+extension EnvironmentValues {
+    var widgetScale: CGFloat {
+        get { self[WidgetScaleKey.self] }
+        set { self[WidgetScaleKey.self] = newValue }
+    }
+}
+
 // MARK: - Themed card
 
 /// A widget card that styles itself from the active theme and lifts slightly on hover.
+/// Glass themes declare `litCardEdges`: the card rim is directional (top-lit,
+/// dimming downward) so the whole panel reads as one lit glass object.
 struct ThemedCard<Content: View>: View {
     @Environment(\.theme) private var theme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var hovered = false
+    @State private var mounted = false
     @ViewBuilder let content: () -> Content
 
     var body: some View {
@@ -47,7 +125,7 @@ struct ThemedCard<Content: View>: View {
                     .fill(theme.cardFill)
                     .overlay(
                         RoundedRectangle(cornerRadius: theme.cardRadius, style: .continuous)
-                            .strokeBorder(theme.cardStroke, lineWidth: 1)
+                            .strokeBorder(cardRim, lineWidth: 1)
                     )
             )
             .overlay {
@@ -61,16 +139,43 @@ struct ThemedCard<Content: View>: View {
                 y: theme.isLight ? 2 : 4
             )
             .scaleEffect(hovered && !reduceMotion ? 1.015 : 1)
+            .opacity(mounted ? 1 : 0)
             .onHover { hovered = $0 }
             .animation(.spring(response: 0.3, dampingFraction: 0.85), value: hovered)
+            .onAppear {
+                // Soft content settle on mount (page open) — one-shot, skipped
+                // under Reduce Motion.
+                if reduceMotion {
+                    mounted = true
+                } else {
+                    withAnimation(.easeOut(duration: 0.22)) { mounted = true }
+                }
+            }
+    }
+
+    /// Lit themes: directional rim (bright at the top, fading downward) —
+    /// light comes from above. Flat themes keep their declared stroke.
+    private var cardRim: some ShapeStyle {
+        if theme.litCardEdges {
+            return AnyShapeStyle(LinearGradient(
+                colors: [Color.white.opacity(0.17), Color.white.opacity(0.04)],
+                startPoint: .top, endPoint: .bottom
+            ))
+        }
+        return AnyShapeStyle(theme.cardStroke)
     }
 }
 
-/// Four L-shaped corner brackets, cyberdeck style.
+/// Four L-shaped corner brackets, cyberdeck style. They "acquire" on mount —
+/// fade + settle inward over a third of a second, like a targeting HUD
+/// locking on. One-shot; Reduce Motion shows them settled immediately.
 struct CornerBrackets: View {
     let color: Color
     var length: CGFloat = 9
     var lineWidth: CGFloat = 1.5
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var acquired = false
 
     var body: some View {
         GeometryReader { geo in
@@ -87,26 +192,39 @@ struct CornerBrackets: View {
             }
             .stroke(color, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
         }
+        .opacity(acquired ? 1 : 0)
+        .scaleEffect(acquired ? 1 : 1.12)
+        .onAppear {
+            if reduceMotion {
+                acquired = true
+            } else {
+                withAnimation(.easeOut(duration: 0.35)) { acquired = true }
+            }
+        }
         .allowsHitTesting(false)
     }
 }
 
 // MARK: - Ring gauge
 
-/// Animated circular gauge with a gradient stroke and centered text.
+/// Animated circular gauge with a gradient stroke and centered text. The arc
+/// draws in from zero on mount (one-shot) so panel open feels alive.
 struct RingGauge<Value: View>: View {
     @Environment(\.theme) private var theme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     let progress: Double // 0...1
     var lineWidth: CGFloat = 11
     let content: () -> Value
+
+    @State private var drawn = false
 
     var body: some View {
         ZStack {
             Circle()
                 .stroke(theme.divider, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
             Circle()
-                .trim(from: 0, to: CGFloat(min(max(progress, 0.002), 1)))
+                .trim(from: 0, to: CGFloat(min(max(drawn ? progress : 0, 0.002), 1)))
                 .stroke(
                     AngularGradient(
                         colors: [theme.accent, theme.accent2, theme.accent],
@@ -121,6 +239,13 @@ struct RingGauge<Value: View>: View {
         }
         .overlay(content())
         .animation(.spring(response: 0.3, dampingFraction: 0.85), value: progress)
+        .onAppear {
+            if reduceMotion {
+                drawn = true
+            } else {
+                withAnimation(.easeOut(duration: 0.45)) { drawn = true }
+            }
+        }
     }
 }
 
@@ -312,7 +437,7 @@ struct ThemeSwitch: View {
                         .offset(x: isOn ? 16 : 2)
                 }
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
         .accessibilityLabel("Toggle")
     }
 }

@@ -32,7 +32,7 @@ struct SettingsView: View {
                 sectionLabel("Diagnostics")
                 diagnosticsControls
 
-                Text("Sidecheck v0.13.1 — audit fixes: stats.fm crash, repeat-listen counting, off-main process scan")
+                Text("Sidecheck v0.15.0 — Noir theme, stacked widgets, widget redesigns")
                     .font(.system(size: 10))
                     .foregroundStyle(theme.textTertiary)
                     .frame(maxWidth: .infinity, alignment: .center)
@@ -116,7 +116,7 @@ struct SettingsView: View {
                 .background(isSelected ? theme.accent.opacity(0.15) : theme.cardFill, in: Capsule())
                 .overlay(Capsule().strokeBorder(isSelected ? theme.accent.opacity(0.6) : theme.cardStroke, lineWidth: 1))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
     }
 
     // MARK: Edge zone
@@ -194,12 +194,15 @@ struct SettingsView: View {
                         .contentTransition(.numericText())
                 }
                 if home.activeLimit > Config.slotCountRange.lowerBound {
-                    Slider(
+                    // PanelSlider, not the AppKit-backed Slider — the plain one
+                    // re-runs Auto Layout during panel transitions (the stall
+                    // PanelSlider exists to avoid).
+                    PanelSlider(
                         value: Binding(
                             get: { Double(home.slotCount) },
                             set: { home.slotCount = Int($0.rounded()) }
                         ),
-                        in: Double(Config.slotCountRange.lowerBound)...Double(home.activeLimit),
+                        range: Double(Config.slotCountRange.lowerBound)...Double(home.activeLimit),
                         step: 1
                     )
                 } else {
@@ -258,7 +261,7 @@ struct SettingsView: View {
                 .foregroundStyle(enabled ? theme.textSecondary : theme.textTertiary.opacity(0.35))
                 .padding(4)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
         .disabled(!enabled)
         .help(direction < 0 ? "Move left" : "Move right")
     }
@@ -545,7 +548,7 @@ struct SettingsView: View {
                 .background(theme.accent.opacity(0.12), in: Capsule())
                 .overlay(Capsule().strokeBorder(theme.accent.opacity(0.4), lineWidth: 1))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
     }
 
     private func refreshNotificationStatus() {
@@ -636,7 +639,7 @@ private struct ThemeSwatch: View {
                     .lineLimit(1)
             }
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
         .scaleEffect(isSelected ? 1.0 : 0.97)
         .animation(.spring(response: 0.3, dampingFraction: 0.8), value: isSelected)
     }

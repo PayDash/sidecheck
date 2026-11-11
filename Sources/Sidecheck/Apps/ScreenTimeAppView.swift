@@ -80,7 +80,7 @@ struct ScreenTimeAppView: View {
                             )
                         )
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
             }
             Spacer()
         }
@@ -180,7 +180,7 @@ struct ScreenTimeAppView: View {
                                 .font(.system(size: 11, weight: .semibold))
                                 .foregroundStyle(theme.accent)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.pressable)
                     }
                 }
                 chart

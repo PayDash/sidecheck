@@ -2,63 +2,128 @@ import SwiftUI
 
 /// The panel's home screen: swappable widget slots, the app launcher, and a
 /// dock. Layout follows the theme's home template so every theme reuses the
-/// same machinery.
+/// same machinery. Hero widgets flex to fill their share of the frame, the
+/// launcher sits right below them, and leftover space collects above the
+/// dock; overflow scrolls from the top as usual.
 struct HomeScreen: View {
     @Environment(\.theme) private var theme
     @EnvironmentObject var home: HomeStore
     @EnvironmentObject var controller: PanelController
+    @EnvironmentObject var performance: PerformanceStore
     let onOpenApp: (AppID) -> Void
+    /// Open choreography flag handed down by PanelView (index 2+ continue
+    /// the header/page stagger). Always true when motion is off.
+    var entrance = true
+
+    @State private var dockHeight: CGFloat = 0
+    @State private var viewportHeight: CGFloat = 0
 
     var body: some View {
         homeContent
     }
 
+    /// Hero widgets flex to fill: the row takes up to ~30% of the space
+    /// between header and dock (120–210pt), and the widgets' visuals scale
+    /// with it — a taller slot grows the widget, not the empty card. The
+    /// launcher sits right below the widgets; leftover space collects at the
+    /// bottom, above the dock (home-screen balance).
+    private var heroHeight: CGFloat {
+        let chrome = theme.showsDock ? dockHeight : 0
+        let available = max(0, viewportHeight - chrome - 32)
+        return min(max(120, available * 0.30), 210)
+    }
+
+    private var heroScale: CGFloat {
+        min(1.4, max(1, heroHeight / 130))
+    }
+
     private var homeContent: some View {
-        VStack(spacing: 0) {
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 16) {
-                    if home.isEditMode {
-                        Text("Rebind a widget with its menu button · long-press to leave edit mode")
-                            .font(.system(size: 11))
-                            .foregroundStyle(theme.textSecondary)
+        GeometryReader { geo in
+            VStack(spacing: 0) {
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 16) {
+                        VStack(spacing: 16) {
+                            if home.isEditMode {
+                                Text("Rebind a widget with its menu button · long-press to leave edit mode")
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(theme.textSecondary)
+                            }
+                            widgetRow
+                        }
+                        .entranceGroup(shown: entrance, index: 2)
+
+                        appArea
+                            .entranceGroup(shown: entrance, index: 3)
+
+                        if theme.showsSearchPill {
+                            searchPill
+                        }
                     }
-                    widgetRow
-                    appArea
-                    if theme.showsSearchPill {
-                        searchPill
-                    }
-                }
-                .padding(16)
-                .frame(maxWidth: .infinity)
-            }
-            if theme.showsDock {
-                dock
                     .padding(.horizontal, 16)
-                    .padding(.bottom, 16)
+                    .padding(.vertical, 16)
+                    .frame(maxWidth: .infinity)
+                }
+
+                if theme.showsDock {
+                    dock
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 16)
+                        .background(dockHeightReader)
+                        .entranceGroup(shown: entrance, index: 4)
+                }
             }
+            .onPreferenceChange(DockHeightKey.self) { dockHeight = $0 }
+            .onAppear { viewportHeight = geo.size.height }
+            .onChange(of: geo.size.height) { _, newValue in viewportHeight = newValue }
         }
         .onLongPressGesture(minimumDuration: 0.5) {
             withAnimation(.snappy) { home.isEditMode = true }
         }
     }
 
+    // MARK: height plumbing
+
+    private struct DockHeightKey: PreferenceKey {
+        static var defaultValue: CGFloat = 0
+        static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
+    }
+
+    private var dockHeightReader: some View {
+        GeometryReader { inner in
+            Color.clear.preference(key: DockHeightKey.self, value: inner.size.height)
+        }
+    }
+
     // MARK: widgets
 
+    @ViewBuilder
     private var widgetRow: some View {
-        // A single slot spans the full width and renders the widget's wide
-        // variant; 2+ slots use the compact layouts. EqualHeightRow (not
-        // HStack/Grid) so every card gets the row's tallest height proposed
-        // back to it — HStack and Grid align smaller siblings instead of
-        // proposing the computed height, so `maxHeight: .infinity` alone
-        // never equalized bare (non-Button) cards.
-        let wide = home.effectiveSlots.count == 1
-        return EqualHeightRow(spacing: 12) {
-            ForEach(home.effectiveSlots.indices, id: \.self) { index in
-                WidgetSlot(index: index, onOpen: onOpenApp, wide: wide)
+        if theme.stacksWideWidgets {
+            // Noir: every slot renders its wide variant, stacked full-width —
+            // the two long cards rather than two small ones side by side.
+            VStack(spacing: 12) {
+                ForEach(home.effectiveSlots.indices, id: \.self) { index in
+                    WidgetSlot(index: index, onOpen: onOpenApp, wide: true, heroHeight: 0, heroScale: 1)
+                }
             }
+            .compositingGroup()
+            .animation(.spring(response: 0.35, dampingFraction: 0.85), value: home.widgetSlots)
+        } else {
+            // A single slot spans the full width and renders the widget's wide
+            // variant; 2+ slots use the compact layouts. EqualHeightRow (not
+            // HStack/Grid) so every card gets the row's tallest height proposed
+            // back to it — HStack and Grid align smaller siblings instead of
+            // proposing the computed height, so `maxHeight: .infinity` alone
+            // never equalized bare (non-Button) cards.
+            let wide = home.effectiveSlots.count == 1
+            EqualHeightRow(spacing: 12) {
+                ForEach(home.effectiveSlots.indices, id: \.self) { index in
+                    WidgetSlot(index: index, onOpen: onOpenApp, wide: wide, heroHeight: heroHeight, heroScale: heroScale)
+                }
+            }
+            .compositingGroup()
+            .animation(.spring(response: 0.35, dampingFraction: 0.85), value: home.widgetSlots)
         }
-        .compositingGroup()
-        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: home.widgetSlots)
     }
 
     // MARK: app launcher
@@ -103,18 +168,22 @@ struct HomeScreen: View {
     }
 
     private var iconGrid: some View {
-        LazyVGrid(
-            columns: [GridItem(.adaptive(minimum: 64), spacing: 14)],
-            spacing: 14
+        // Tiles scale with the panel-size slider so a larger panel fills with
+        // larger icons, not just more empty air (the dock already does this).
+        let scale = controller.panelScale
+        let cell = 64 * scale
+        let spacing: CGFloat = 14
+        return LazyVGrid(
+            columns: [GridItem(.adaptive(minimum: cell), spacing: spacing)],
+            spacing: spacing
         ) {
             ForEach(AppID.allCases) { id in
                 Button {
                     onOpenApp(id)
                 } label: {
-                    AppIconTile(app: PanelApp.app(id))
+                    AppIconTile(app: PanelApp.app(id), size: 56 * scale)
                 }
-                .buttonStyle(.plain)
-                .jiggle(active: home.isEditMode)
+                .buttonStyle(.pressable)
             }
         }
     }
@@ -122,31 +191,68 @@ struct HomeScreen: View {
     private var terminalList: some View {
         VStack(spacing: 8) {
             ForEach(AppID.allCases) { id in
-                Button {
+                TerminalRow(app: PanelApp.app(id), cursorBlinks: performance.isOn(.microAnimations)) {
                     onOpenApp(id)
-                } label: {
-                    HStack(spacing: 10) {
-                        Text("»")
-                            .font(.system(size: 12, weight: .semibold, design: .monospaced))
-                            .foregroundStyle(theme.accent)
-                        Text(PanelApp.app(id).name.uppercased())
-                            .font(.system(size: 13, weight: .semibold, design: .monospaced))
-                            .foregroundStyle(theme.textPrimary)
-                        Spacer()
+                }
+            }
+        }
+    }
+
+    /// One phosphor terminal row. Hovering lights the row and swaps the
+    /// chevron for a blinking block cursor — the terminal answering you.
+    private struct TerminalRow: View {
+        @Environment(\.theme) private var theme
+        @Environment(\.accessibilityReduceMotion) private var reduceMotion
+        let app: PanelApp
+        let cursorBlinks: Bool
+        let action: () -> Void
+
+        @State private var hovered = false
+        @State private var blink = false
+
+        var body: some View {
+            Button(action: action) {
+                HStack(spacing: 10) {
+                    Text("»")
+                        .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                        .foregroundStyle(hovered ? theme.accent : theme.accent.opacity(0.7))
+                        .themeGlow(theme)
+                    Text(app.name.uppercased())
+                        .font(.system(size: 13, weight: .semibold, design: .monospaced))
+                        .foregroundStyle(theme.textPrimary)
+                    Spacer()
+                    if hovered {
+                        Capsule()
+                            .fill(theme.accent)
+                            .frame(width: 7, height: 12)
+                            .opacity(blink ? 0.15 : 1)
+                            .animation(
+                                cursorBlinks && !reduceMotion
+                                    ? .easeInOut(duration: 0.55).repeatForever(autoreverses: true)
+                                    : nil,
+                                value: blink
+                            )
+                            .onAppear { blink = true }
+                    } else {
                         Image(systemName: "chevron.right")
                             .font(.system(size: 9, weight: .semibold))
                             .foregroundStyle(theme.textTertiary)
                     }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 10)
-                    .background(theme.cardFill, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .strokeBorder(theme.cardStroke, lineWidth: 1)
-                    )
                 }
-                .buttonStyle(.plain)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .background(
+                    hovered ? theme.accent.opacity(0.10) : theme.cardFill,
+                    in: RoundedRectangle(cornerRadius: 8, style: .continuous)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .strokeBorder(hovered ? theme.accent.opacity(0.4) : theme.cardStroke, lineWidth: 1)
+                )
             }
+            .buttonStyle(.pressable)
+            .onHover { hovered = $0 }
+            .animation(PanelMotion.hover, value: hovered)
         }
     }
 
@@ -187,8 +293,7 @@ struct HomeScreen: View {
                 } label: {
                     AppIconTile(app: PanelApp.app(id), size: size, showsLabel: false)
                 }
-                .buttonStyle(.plain)
-                .jiggle(active: home.isEditMode)
+                .buttonStyle(.pressable)
             }
         }
         .padding(.horizontal, 22)

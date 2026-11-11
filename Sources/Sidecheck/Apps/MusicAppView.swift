@@ -122,7 +122,7 @@ struct MusicAppView: View {
                     )
                 )
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
     }
 
     // MARK: History
@@ -224,7 +224,7 @@ struct MusicAppView: View {
                             .background(theme.accent.opacity(topRange == range ? 0.14 : 0), in: Capsule())
                             .overlay(Capsule().strokeBorder(topRange == range ? theme.accent.opacity(0.5) : theme.cardStroke, lineWidth: 1))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                 }
                 Spacer()
             }
@@ -430,7 +430,7 @@ struct MusicAppView: View {
                 .padding(.vertical, 4)
                 .background(Color.red.opacity(0.85), in: Capsule())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
     }
 
     private var connectCard: some View {
@@ -469,7 +469,7 @@ struct MusicAppView: View {
                                     .strokeBorder(theme.accent.opacity(0.4), lineWidth: 1)
                             )
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                 }
                 if let error = statsFm.lastError {
                     Text(error)
@@ -532,18 +532,6 @@ struct MusicAppView: View {
                                 .foregroundStyle(theme.textTertiary)
                                 .lineLimit(1)
                         }
-                        HStack(spacing: 4) {
-                            Image(systemName: "waveform")
-                                .font(.system(size: 9, weight: .semibold))
-                                .foregroundStyle(theme.textTertiary)
-                            Text(track.player)
-                                .font(.system(size: 10, weight: .semibold))
-                                .foregroundStyle(theme.textTertiary)
-                        }
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(theme.cardFill, in: Capsule())
-                        .overlay(Capsule().strokeBorder(theme.cardStroke, lineWidth: 1))
                     }
                     Spacer()
                 }
@@ -594,11 +582,11 @@ struct MusicAppView: View {
             } label: {
                 Image(systemName: music.isPlaying ? "pause.fill" : "play.fill")
                     .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(theme.accentIsLight ? Color.black : Color.white)
                     .frame(width: 56, height: 56)
                     .background(Circle().fill(theme.accent))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
             transportButton("forward.fill", size: 15) { music.next() }
             Spacer()
         }
@@ -613,7 +601,7 @@ struct MusicAppView: View {
                 .font(.system(size: size, weight: .semibold))
                 .foregroundStyle(theme.textPrimary)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
     }
 
     @ViewBuilder

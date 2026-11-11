@@ -324,7 +324,7 @@ struct ProcessesCard: View {
                 .background(theme.accent.opacity(metric == candidate ? 0.14 : 0), in: Capsule())
                 .overlay(Capsule().strokeBorder(metric == candidate ? theme.accent.opacity(0.5) : theme.cardStroke, lineWidth: 1))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
     }
 
     private func value(_ sample: ProcessSample) -> Double {
@@ -386,7 +386,7 @@ struct ProcessesCard: View {
                     )
                     .overlay(Capsule().strokeBorder(armed ? Color.red : theme.cardStroke, lineWidth: 1))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
         }
     }
 }
@@ -408,6 +408,15 @@ struct MeterBar: View {
     }
 
     var body: some View {
+        if theme.meterSegments > 0 {
+            segmented
+        } else {
+            smooth
+        }
+    }
+
+    /// Glass themes: one glossy capsule filling left to right.
+    private var smooth: some View {
         GeometryReader { geo in
             ZStack(alignment: .leading) {
                 Capsule().fill(theme.divider)
@@ -416,6 +425,24 @@ struct MeterBar: View {
                     .frame(width: geo.size.width * min(max(progress, 0), 1))
                     .animation(animation, value: progress)
             }
+        }
+        .frame(height: 8)
+    }
+
+    /// Phosphor themes: N discrete segments lighting up like a terminal VU
+    /// meter — the theme declares the count in `meterSegments`.
+    private var segmented: some View {
+        let segments = theme.meterSegments
+        let filled = Int((min(max(progress, 0), 1) * Double(segments)).rounded())
+        return GeometryReader { geo in
+            HStack(spacing: max(2, geo.size.width * 0.07)) {
+                ForEach(0..<segments, id: \.self) { index in
+                    Capsule()
+                        .fill(index < filled ? (colors.first ?? theme.accent) : theme.divider)
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .animation(animation, value: progress)
         }
         .frame(height: 8)
     }

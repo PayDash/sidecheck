@@ -586,7 +586,7 @@ final class TokscaleStore: ObservableObject {
     @Published var range: TokenRange = .today {
         didSet {
             guard range != oldValue else { return }
-            scanIfStale(force: true)
+            scanIfStale() // a fresh memo for the new range renders instantly
         }
     }
 
@@ -648,14 +648,31 @@ final class TokscaleStore: ObservableObject {
         scanIfStale()
     }
 
-    /// Scans unless a fresh-enough snapshot for the current range already
-    /// exists. Called on panel show and by the 60 s visible timer.
-    func scanIfStale(force: Bool = false) {
-        if !force, let cached = memo[range],
-           Date().timeIntervalSince(cached.scannedAt) < Self.scanInterval {
+    /// The cache-first entry point — range switches, panel show and the
+    /// 60 s visible timer all come through here:
+    /// - a fresh memo (< 60 s) for the current range renders instantly, no
+    ///   scan, no skeleton;
+    /// - a stale memo still renders immediately (the footer shows its age)
+    ///   while the refresh runs behind it — never a skeleton flash for data
+    ///   we already have;
+    /// - nothing cached → scan.
+    func scanIfStale() {
+        if let cached = memo[range] {
             snapshot = cached
             state = .ready
-            return
+            if Date().timeIntervalSince(cached.scannedAt) < Self.scanInterval {
+                return
+            }
+        }
+        scan()
+    }
+
+    /// The Rescan button: bypasses the fresh-memo shortcut, but still shows
+    /// the previous snapshot while the new scan runs.
+    func rescan() {
+        if let cached = memo[range] {
+            snapshot = cached
+            state = .ready
         }
         scan()
     }

@@ -22,30 +22,25 @@ enum WidgetKind: String, CaseIterable, Identifiable {
     case monitor
     case battery
     case network
-    case disk
     case topProcesses
     case clipboard
-    case wallpaper
     case awake
     case screenTime
     case tokens
     case music
     case performance
-    case settings
 
     var id: String { rawValue }
 
     var app: AppID {
         switch self {
-        case .monitor, .battery, .network, .disk, .topProcesses: .monitor
+        case .monitor, .battery, .network, .topProcesses: .monitor
         case .clipboard: .clipboard
-        case .wallpaper: .wallpaper
         case .awake: .awake
         case .screenTime: .screenTime
         case .tokens: .tokens
         case .music: .music
         case .performance: .performance
-        case .settings: .settings
         }
     }
 
@@ -54,16 +49,13 @@ enum WidgetKind: String, CaseIterable, Identifiable {
         case .monitor: "Monitor"
         case .battery: "Battery"
         case .network: "Network"
-        case .disk: "Disk"
         case .topProcesses: "Processes"
         case .clipboard: "Clipboard"
-        case .wallpaper: "Wallpaper"
         case .awake: "Awake"
         case .screenTime: "Screen Time"
         case .tokens: "Tokens"
         case .music: "Music"
         case .performance: "Performance"
-        case .settings: "Settings"
         }
     }
 
@@ -72,16 +64,13 @@ enum WidgetKind: String, CaseIterable, Identifiable {
         case .monitor: "waveform.path.ecg"
         case .battery: "battery.75percent"
         case .network: "wifi"
-        case .disk: "internaldrive"
         case .topProcesses: "cpu"
         case .clipboard: "doc.on.clipboard"
-        case .wallpaper: "paintpalette.fill"
         case .awake: "cup.and.saucer.fill"
         case .screenTime: "hourglass"
         case .tokens: "flame.fill"
         case .music: "music.note"
         case .performance: "bolt.fill"
-        case .settings: "gearshape.fill"
         }
     }
 
@@ -90,16 +79,13 @@ enum WidgetKind: String, CaseIterable, Identifiable {
         case .monitor: .blue
         case .battery: .green
         case .network: .purple
-        case .disk: .orange
         case .topProcesses: .mint
         case .clipboard: .pink
-        case .wallpaper: .teal
         case .awake: .orange
         case .screenTime: .indigo
         case .tokens: .cyan
         case .music: .red
         case .performance: .yellow
-        case .settings: .gray
         }
     }
 
@@ -110,16 +96,13 @@ enum WidgetKind: String, CaseIterable, Identifiable {
         case .monitor: MonitorHomeWidget()
         case .battery: BatteryHomeWidget()
         case .network: NetworkHomeWidget()
-        case .disk: DiskHomeWidget()
         case .topProcesses: TopProcessesHomeWidget()
         case .clipboard: ClipboardHomeWidget()
-        case .wallpaper: WallpaperHomeWidget()
         case .awake: AwakeHomeWidget()
         case .screenTime: ScreenTimeHomeWidget()
         case .tokens: TokenHomeWidget()
         case .music: MusicHomeWidget()
         case .performance: PerformanceHomeWidget()
-        case .settings: SettingsHomeWidget()
         }
     }
 
@@ -128,6 +111,7 @@ enum WidgetKind: String, CaseIterable, Identifiable {
     var wideWidget: some View {
         switch self {
         case .monitor: MonitorWideWidget()
+        case .battery: BatteryWideWidget()
         case .screenTime: ScreenTimeWideWidget()
         case .tokens: TokenWideWidget()
         case .music: MusicWideWidget()

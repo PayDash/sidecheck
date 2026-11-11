@@ -82,7 +82,7 @@ struct AwakeAppView: View {
                                 .padding(.vertical, 4)
                                 .background(Color.red.opacity(0.85), in: Capsule())
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.pressable)
                         .padding(.top, 2)
                     }
                 }
@@ -192,7 +192,7 @@ struct AwakeAppView: View {
                                 .strokeBorder(theme.accent.opacity(0.4), lineWidth: 1)
                         )
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
                 .disabled(customDuration < 60)
 
                 HStack(spacing: 10) {
@@ -236,7 +236,7 @@ struct AwakeAppView: View {
                 .background(theme.cardFill, in: Capsule())
                 .overlay(Capsule().strokeBorder(theme.cardStroke, lineWidth: 1))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
         .scaleEffect(1)
         .help(duration.map { "Stay awake for \(Int($0 / 3600)) hours" } ?? "Stay awake until stopped")
     }
