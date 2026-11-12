@@ -74,6 +74,8 @@ open build/Sidecheck.app
 cp -R build/Sidecheck.app /Applications/   # to install
 ```
 
+**App icon:** replace `Resources/logo.*` with any jpg/png (keep exactly one) and rebuild — the squircle-masked `.icns` regenerates automatically (`Scripts/make_icon.swift`).
+
 ## Architecture notes
 
 - `Apps/PanelApp.swift` — `AppID` (monitor, clipboard, settings) + `WidgetKind` (home widget flavors; battery/network/disk widgets open Monitor); adding an app = one case + `fullView` branch
@@ -120,4 +122,4 @@ SIDECHECK_AUTOSHOW=1 SIDECHECK_OPENAPP=settings .build/release/Sidecheck
 - [ ] Global hotkey to toggle the panel
 
 ---
-*v0.15.0 — **Noir**, the third theme: black & white with a serif glow, status-only color (green charging / yellow hot / red critical), a drifting light-field background (`glow` kind), monochrome app tiles, and home widgets stacked full-width (2–6 of them). The home header trades the wordmark for a centered live clock. Music's wide widget trades its play badge for an animated equalizer, the Music app drops the player tag, Tokens' long widget tightens to usage + cache hit, and the Wallpaper/Disk/Settings home widgets are removed. Plus the polish: typographic widgets, memory visualizer fixes, Tokens per-range caching. Still built by an agent and its human.* ⚡Still built by an agent and its human.* ⚡
+*v0.15.0 — **Noir**, the third theme: black & white with a serif glow, status-only color (green charging / yellow hot / red critical), a drifting light-field background (`glow` kind), monochrome app tiles, and home widgets stacked full-width (2–6 of them). The home header trades the wordmark for a centered live clock. Music's wide widget trades its play badge for an animated equalizer, the Music app drops the player tag, Tokens' long widget tightens to usage + cache hit, and the Wallpaper/Disk/Settings home widgets are removed. Plus the polish: typographic widgets, memory visualizer fixes, Tokens per-range caching. Still built by an agent and its human.* ⚡
